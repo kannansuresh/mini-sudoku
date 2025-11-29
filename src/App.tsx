@@ -9,7 +9,7 @@ import { isValid } from "@/lib/sudoku";
 import confetti from "canvas-confetti";
 import { ThemeProvider } from "@/components/theme-provider";
 function App() {
-  const { status, startGame, setCellValue, undo, clearCell, selectedCell, selectCell, settings, toggleNote } = useGameStore();
+  const { status, startGame, setCellValue, undo, clearCell, selectedCell, selectCell, toggleNote } = useGameStore();
 
   useEffect(() => {
     // Start a game on load if not playing
@@ -20,34 +20,24 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Shift key for temp notes mode
+      if (e.key === 'Shift') {
+        useGameStore.getState().setTempNotesMode(true);
+      }
+
       if (status !== 'playing') return;
 
       // Numbers 1-6
       if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
         const num = parseInt(e.key) as 1|2|3|4|5|6;
+        const { settings, tempNotesMode } = useGameStore.getState();
 
-        // Check if placement is allowed if setting is enabled
-
-
-        if (settings.notesMode) {
+        if (settings.notesMode || tempNotesMode) {
           toggleNote(num);
         } else {
            // Validation logic
            if (settings.showAvailablePlacements && selectedCell) {
              const { grid } = useGameStore.getState();
-             // We need to check if it's valid
-             // Since we can't easily import isValid here without potential circular deps or just messiness,
-             // let's just use a simple check or assume the user is correct if they are using physical keyboard
-             // OR better, let's just skip validation for now as it's complex to wire up here without refactoring.
-             // Wait, the user explicitly asked for this.
-             // "When aviailable placemnts is enabled, uesr is still able to enter non available number using the physical keyboard or laptop keyboard"
-
-             // I MUST implement this.
-             // I will import isValid from lib/sudoku
-             // I will add the import at the top of the file in a separate step.
-
-             // For now, I'll just put the logic here assuming isValid is imported.
-             // I'll add the import in the next step.
              if (!isValid(grid, selectedCell.row, selectedCell.col, num)) {
                return; // Block input
              }
@@ -78,9 +68,19 @@ function App() {
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        useGameStore.getState().setTempNotesMode(false);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [status, selectedCell, settings.notesMode, setCellValue, undo, clearCell, selectCell, toggleNote]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [status, selectedCell, setCellValue, undo, clearCell, selectCell, toggleNote]);
 
   useEffect(() => {
     if (status === 'won') {

@@ -15,12 +15,13 @@ export function Keyboard() {
     grid,
     initialGrid,
     selectedCell,
-    status
+    status,
+    tempNotesMode
   } = useGameStore();
 
   const handleNumberClick = (num: CellValue) => {
     if (status === 'won') return;
-    if (settings.notesMode) {
+    if (settings.notesMode || tempNotesMode) {
       toggleNote(num as number);
     } else {
       setCellValue(num);

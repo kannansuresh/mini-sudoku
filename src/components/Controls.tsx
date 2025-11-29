@@ -18,8 +18,11 @@ export function Controls() {
   const {
     settings,
     setNotesMode,
-    status
+    status,
+    tempNotesMode
   } = useGameStore();
+
+  const isNotesActive = settings.notesMode || tempNotesMode;
   const [error, setError] = useState<string | null>(null);
 
   const handleHint = () => {
@@ -67,17 +70,27 @@ export function Controls() {
     <div className="flex w-full justify-between gap-2">
       <Button
         variant="ghost"
-        className="flex-1 hover:bg-transparent hover:text-neutral-900 dark:hover:text-neutral-100"
+        size="lg"
+        className={cn(
+          "flex-1 gap-2 h-auto py-2 hover:bg-transparent",
+          isNotesActive
+            ? "text-neutral-900 dark:text-neutral-100"
+            : "text-neutral-500 dark:text-neutral-400"
+        )}
         onClick={() => setNotesMode(!settings.notesMode)}
         disabled={status === 'won'}
       >
-        <Pencil className="mr-2 h-4 w-4" />
-        Notes
-        <span className={cn(
-          "ml-1 font-bold w-8 text-left inline-block",
-          settings.notesMode ? "text-green-600 dark:text-green-400" : "text-neutral-300 dark:text-neutral-600"
-        )}>
-          {settings.notesMode ? "ON" : "OFF"}
+        <div className="relative">
+          <Pencil className={cn("h-5 w-5 transition-all", isNotesActive && "stroke-2")} />
+          {isNotesActive && (
+            <span className="absolute -left-1 -bottom-1 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+          )}
+        </div>
+        <span className="text-sm font-medium">
+          Notes
         </span>
       </Button>
 

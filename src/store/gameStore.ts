@@ -25,6 +25,7 @@ interface GameState {
   timer: number;
   settings: GameSettings;
   activeHint: { row: number; col: number; value: number; reason: string } | null;
+  tempNotesMode: boolean;
 
   // Actions
   startGame: (difficulty: Difficulty, customGrid?: Grid) => void;
@@ -41,6 +42,7 @@ interface GameState {
   clearCell: () => void;
   toggleSettings: (setting: keyof GameSettings) => void;
   setNotesMode: (enabled: boolean) => void;
+  setTempNotesMode: (enabled: boolean) => void;
   tickTimer: () => void;
   checkWin: () => void;
 }
@@ -68,6 +70,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   timer: 0,
   settings: DEFAULT_SETTINGS,
   activeHint: null,
+  tempNotesMode: false,
 
   startGame: (difficulty, customGrid) => {
     // Reset seed to random for normal games
@@ -348,6 +351,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     set(state => ({
       settings: { ...state.settings, notesMode: enabled }
     }));
+  },
+
+  setTempNotesMode: (enabled: boolean) => {
+    set({ tempNotesMode: enabled });
   },
 
   tickTimer: () => {
