@@ -61,7 +61,7 @@ export function Keyboard() {
         key={num}
         variant="outline"
         className={cn(
-          "relative flex h-14 w-full flex-col items-center justify-center p-0 text-2xl font-medium sm:h-16 sm:text-4xl",
+          "relative flex h-14 w-full flex-col items-center justify-center p-0 text-2xl font-medium sm:h-16 sm:text-3xl",
           "bg-white dark:bg-neutral-800",
           (settings.notesMode || tempNotesMode) && "font-['Patrick_Hand'] italic",
           disabled && "opacity-20 pointer-events-none"
