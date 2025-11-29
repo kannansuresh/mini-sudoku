@@ -1,6 +1,7 @@
 import { useGameStore } from "@/store/gameStore";
 import { useEffect } from "react";
 import { SettingsModal } from "./SettingsModal";
+import { ModeToggle } from "./mode-toggle";
 import { Button } from "@/components/ui/button";
 import type { Difficulty } from "@/lib/sudoku";
 
@@ -157,6 +158,7 @@ export function GameHeader() {
           </DropdownMenu>
 
           <SettingsModal />
+          <ModeToggle />
         </TooltipProvider>
       </div>
 

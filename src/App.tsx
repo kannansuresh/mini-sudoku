@@ -7,7 +7,7 @@ import { GameHeader } from "@/components/GameHeader";
 import { HintMessage } from "@/components/HintMessage";
 import { isValid } from "@/lib/sudoku";
 import confetti from "canvas-confetti";
-
+import { ThemeProvider } from "@/components/theme-provider";
 function App() {
   const { status, startGame, setCellValue, undo, clearCell, selectedCell, selectCell, settings, toggleNote } = useGameStore();
 
@@ -115,27 +115,34 @@ function App() {
   }, [status]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 p-4 font-sans text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
-      <div className="w-fit flex flex-col items-center">
-        <GameHeader />
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <div className="flex min-h-screen w-full items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
+        <div className="w-fit">
+          <GameHeader />
 
-        <main className="relative w-full space-y-6">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <SudokuGrid />
+          <main className="relative flex w-fit flex-col items-center gap-6 rounded-xl bg-white p-4 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
+            <div className="relative z-10">
+              <SudokuGrid />
+              <HintMessage />
+            </div>
+
+            <div className="w-full max-w-md">
+              <Controls />
+            </div>
+
+            <div className="w-full max-w-md">
+              <Keyboard />
+            </div>
+          </main>
+
+          <footer className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+            <p>
+              Built by <a href="https://github.com/kannansuresh" className="font-medium underline underline-offset-4 hover:text-neutral-900 dark:hover:text-neutral-100">Kannan Suresh</a>
+            </p>
+          </footer>
         </div>
-
-        <HintMessage />
-
-        <Controls />
-
-        <Keyboard />
-      </main>
-
-      <footer className="mt-8 text-center text-sm text-neutral-400">
-        <p>Built with React, Tailwind CSS 4 & Shadcn UI</p>
-      </footer>
       </div>
-    </div>
+    </ThemeProvider>
   );
 }
 
