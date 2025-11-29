@@ -72,8 +72,12 @@ export function Controls() {
       {activeHint ? (
         <div className="flex w-full h-[52px] items-center justify-start p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-900/50">
           <p className="text-xs text-left text-yellow-800 dark:text-yellow-200 line-clamp-2 leading-tight">
-            <span className="font-bold mr-1">Place {activeHint.value}:</span>
-            {activeHint.reason}
+            {activeHint.reason.split(String(activeHint.value)).map((part, i, arr) => (
+              <span key={i}>
+                {part}
+                {i < arr.length - 1 && <span className="font-bold">{activeHint.value}</span>}
+              </span>
+            ))}
           </p>
         </div>
       ) : (
