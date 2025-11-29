@@ -52,7 +52,7 @@ export function Cell({ row, col, value, isInitial, isConflict }: CellProps) {
         backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(220, 38, 38, 0.1) 5px, rgba(220, 38, 38, 0.1) 10px)"
       } : undefined}
       className={cn(
-        "relative flex h-12 w-12 cursor-pointer items-center justify-center border-r border-b border-neutral-200 text-2xl font-medium transition-colors select-none dark:border-neutral-700 sm:h-14 sm:w-14",
+        "relative flex h-12 w-12 cursor-pointer items-center justify-center border-r border-b border-neutral-200 text-2xl sm:text-3xl font-medium transition-colors select-none dark:border-neutral-700 sm:h-[68px] sm:w-[68px]",
         // Borders for regions (handled in Grid, but maybe here too?)
         // Grid handles thick borders. Here we just do standard cell borders.
 
@@ -79,7 +79,7 @@ export function Cell({ row, col, value, isInitial, isConflict }: CellProps) {
       ) : (
         <div className="grid h-full w-full grid-cols-3 grid-rows-2 font-['Patrick_Hand'] italic">
           {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="flex items-center justify-center text-sm leading-none text-neutral-500 dark:text-neutral-400 sm:text-base">
+            <div key={n} className="flex items-center justify-center text-sm leading-none text-neutral-500 dark:text-neutral-400 sm:text-sm">
               {cellNotes.includes(n) ? n : ""}
             </div>
           ))}

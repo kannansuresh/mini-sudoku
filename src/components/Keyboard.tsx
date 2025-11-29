@@ -61,15 +61,16 @@ export function Keyboard() {
         key={num}
         variant="outline"
         className={cn(
-          "relative flex h-14 w-full flex-col items-center justify-center p-0 text-xl font-medium sm:h-16 sm:text-2xl",
+          "relative flex h-14 w-full flex-col items-center justify-center p-0 text-2xl font-medium sm:h-16 sm:text-4xl",
           "bg-white dark:bg-neutral-800",
+          (settings.notesMode || tempNotesMode) && "font-['Patrick_Hand'] italic",
           disabled && "opacity-20 pointer-events-none"
         )}
         onClick={() => handleNumberClick(num as CellValue)}
         disabled={disabled || status === 'won'}
       >
         <span>{num}</span>
-        {settings.countRemaining && !finished && (
+        {settings.countRemaining && !finished && !settings.notesMode && !tempNotesMode && (
           <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px] font-bold text-neutral-600 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:ring-neutral-600">
             {getRemainingCount(num)}
           </span>

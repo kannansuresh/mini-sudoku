@@ -1,6 +1,6 @@
 import { useGameStore } from "@/store/gameStore";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Pencil } from "lucide-react";
+import { Lightbulb, Pencil, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -20,7 +20,8 @@ export function Controls() {
     setNotesMode,
     status,
     tempNotesMode,
-    activeHint
+    activeHint,
+    clearHint
   } = useGameStore();
 
   const isNotesActive = settings.notesMode || tempNotesMode;
@@ -68,10 +69,10 @@ export function Controls() {
   }
 
   return (
-    <div className="flex w-full justify-between gap-2 min-h-[52px] items-center">
+    <div className="flex w-full justify-between gap-2 min-h-[48px] items-center">
       {activeHint ? (
-        <div className="flex w-full h-[52px] items-center justify-start p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-900/50">
-          <p className="text-xs text-left text-yellow-800 dark:text-yellow-200 line-clamp-2 leading-tight">
+        <div className="flex w-full h-[48px] items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-900/50">
+          <p className="text-xs text-left text-yellow-800 dark:text-yellow-200 line-clamp-2 leading-tight flex-1 mr-2">
             {activeHint.reason.split(String(activeHint.value)).map((part, i, arr) => (
               <span key={i}>
                 {part}
@@ -79,6 +80,14 @@ export function Controls() {
               </span>
             ))}
           </p>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 min-w-6 text-yellow-700 hover:text-yellow-900 hover:bg-yellow-100 dark:text-yellow-300 dark:hover:text-yellow-100 dark:hover:bg-yellow-900/50"
+            onClick={clearHint}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       ) : (
         <>
