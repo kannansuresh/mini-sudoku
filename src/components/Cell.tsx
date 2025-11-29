@@ -77,9 +77,9 @@ export function Cell({ row, col, value, isInitial, isConflict }: CellProps) {
       {value !== null ? (
         value
       ) : (
-        <div className="grid grid-cols-3 gap-0.5 p-0.5 text-[8px] leading-none text-neutral-500 dark:text-neutral-400 sm:text-[10px]">
+        <div className="grid h-full w-full grid-cols-3 grid-rows-2 font-['Patrick_Hand'] italic">
           {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="flex items-center justify-center">
+            <div key={n} className="flex items-center justify-center text-sm leading-none text-neutral-500 dark:text-neutral-400 sm:text-base">
               {cellNotes.includes(n) ? n : ""}
             </div>
           ))}

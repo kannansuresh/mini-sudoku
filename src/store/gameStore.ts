@@ -308,12 +308,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   clearCell: () => {
-    const { selectedCell, initialGrid, grid, history, historyPointer } = get();
+    const { selectedCell, initialGrid, grid, history, historyPointer, notes } = get();
     if (!selectedCell) return;
     const { row, col } = selectedCell;
 
     if (initialGrid[row][col] !== null) return;
-    if (grid[row][col] === null) return;
+
+    const hasValue = grid[row][col] !== null;
+    const hasNotes = notes[`${row}-${col}`] && notes[`${row}-${col}`].length > 0;
+
+    if (!hasValue && !hasNotes) return;
 
     const newGrid = grid.map(r => [...r]);
     newGrid[row][col] = null;
@@ -321,10 +325,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     const newHistory = history.slice(0, historyPointer + 1);
     newHistory.push(newGrid.map(r => [...r]));
 
+    const newNotes = { ...notes };
+    if (hasNotes) {
+      delete newNotes[`${row}-${col}`];
+    }
+
     set({
       grid: newGrid,
       history: newHistory,
       historyPointer: newHistory.length - 1,
+      notes: newNotes,
     });
   },
 
