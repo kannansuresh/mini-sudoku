@@ -4,7 +4,6 @@ import { SudokuGrid } from "@/components/SudokuGrid";
 import { Keyboard } from "@/components/Keyboard";
 import { Controls } from "@/components/Controls";
 import { GameHeader } from "@/components/GameHeader";
-import { HintMessage } from "@/components/HintMessage";
 import { isValid } from "@/lib/sudoku";
 import confetti from "canvas-confetti";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -123,10 +122,9 @@ function App() {
           <main className="relative flex w-fit flex-col items-center gap-6 rounded-xl bg-white p-4 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
             <div className="relative z-10">
               <SudokuGrid />
-              <HintMessage />
             </div>
 
-            <div className="w-full max-w-md">
+            <div className="w-[18.5rem] sm:w-[21.5rem]">
               <Controls />
             </div>
 

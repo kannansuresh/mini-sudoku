@@ -162,20 +162,176 @@ export const getDailySeed = (): number => {
 
 
 export const getHint = (grid: Grid, solution: Grid): { row: number, col: number, value: number, reason: string } | null => {
-  // Find a cell that is empty
+  // Helper to get candidates for a cell
+  const getCandidates = (r: number, c: number): number[] => {
+    const candidates: number[] = [];
+    for (let num = 1; num <= 6; num++) {
+      if (isValid(grid, r, c, num as CellValue)) {
+        candidates.push(num);
+      }
+    }
+    return candidates;
+  };
+
+  // Strategy A: Full House (Priority 1)
+  // Check Rows
   for (let r = 0; r < ROWS; r++) {
+    let emptyCount = 0;
+    let emptyCol = -1;
     for (let c = 0; c < COLS; c++) {
       if (grid[r][c] === null) {
-        // Simple hint: just give the value
-        return {
-          row: r,
-          col: c,
-          value: solution[r][c] as number,
-          reason: "This is the only possible number here based on row, column and region rules."
-        };
+        emptyCount++;
+        emptyCol = c;
+      }
+    }
+    if (emptyCount === 1) {
+      const val = solution[r][emptyCol] as number; // We can trust solution or deduce it
+      return { row: r, col: emptyCol, value: val, reason: `The only option left in this row is ${val}.` };
+    }
+  }
+
+  // Check Cols
+  for (let c = 0; c < COLS; c++) {
+    let emptyCount = 0;
+    let emptyRow = -1;
+    for (let r = 0; r < ROWS; r++) {
+      if (grid[r][c] === null) {
+        emptyCount++;
+        emptyRow = r;
+      }
+    }
+    if (emptyCount === 1) {
+      const val = solution[emptyRow][c] as number;
+      return { row: emptyRow, col: c, value: val, reason: `The only option left in this column is ${val}.` };
+    }
+  }
+
+  // Check Regions
+  for (let br = 0; br < ROWS; br += BOX_HEIGHT) {
+    for (let bc = 0; bc < COLS; bc += BOX_WIDTH) {
+      let emptyCount = 0;
+      let lastEmpty = { r: -1, c: -1 };
+      for (let r = 0; r < BOX_HEIGHT; r++) {
+        for (let c = 0; c < BOX_WIDTH; c++) {
+          if (grid[br + r][bc + c] === null) {
+            emptyCount++;
+            lastEmpty = { r: br + r, c: bc + c };
+          }
+        }
+      }
+      if (emptyCount === 1) {
+        const val = solution[lastEmpty.r][lastEmpty.c] as number;
+        return { row: lastEmpty.r, col: lastEmpty.c, value: val, reason: `The only option left in this region is ${val}.` };
       }
     }
   }
+
+  // Strategy B: Hidden Single (Priority 2)
+  // For each region, check if a number can only go in one spot
+  for (let br = 0; br < ROWS; br += BOX_HEIGHT) {
+    for (let bc = 0; bc < COLS; bc += BOX_WIDTH) {
+      // For each number 1-6
+      for (let num = 1; num <= 6; num++) {
+        // Check if number is already in region
+        let present = false;
+        for (let r = 0; r < BOX_HEIGHT; r++) {
+          for (let c = 0; c < BOX_WIDTH; c++) {
+            if (grid[br + r][bc + c] === num) present = true;
+          }
+        }
+        if (present) continue;
+
+        // Find possible spots for 'num' in this region
+        let possibleSpots: { r: number, c: number }[] = [];
+        for (let r = 0; r < BOX_HEIGHT; r++) {
+          for (let c = 0; c < BOX_WIDTH; c++) {
+            if (grid[br + r][bc + c] === null) {
+              // Check if valid placement for 'num' (ignoring that we are in the region loop, isValid checks row/col/region)
+              // Actually isValid checks region too, but we know it's not in region yet.
+              // So isValid is safe.
+              if (isValid(grid, br + r, bc + c, num as CellValue)) {
+                possibleSpots.push({ r: br + r, c: bc + c });
+              }
+            }
+          }
+        }
+
+        if (possibleSpots.length === 1) {
+          const spot = possibleSpots[0];
+          return {
+            row: spot.r,
+            col: spot.c,
+            value: num,
+            reason: `This cell has to be ${num} due to all other cells in this region being blocked by other ${num}s.`
+          };
+        }
+      }
+    }
+  }
+
+  // Strategy C: Naked Single (Priority 3)
+  // Find a cell that has only one candidate
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (grid[r][c] === null) {
+        const candidates = getCandidates(r, c);
+        if (candidates.length === 1) {
+          const val = candidates[0];
+
+          // Determine reason nuance
+          // Check if eliminated by Row & Col only
+          // We check if the other 5 numbers exist in Row U Col
+          let rowColEliminatedAll = true;
+          const otherNums = [1, 2, 3, 4, 5, 6].filter(n => n !== val);
+
+          for (const other of otherNums) {
+            let foundInRow = false;
+            let foundInCol = false;
+            // Check Row
+            for(let cc=0; cc<COLS; cc++) if(grid[r][cc] === other) foundInRow = true;
+            // Check Col
+            for(let rr=0; rr<ROWS; rr++) if(grid[rr][c] === other) foundInCol = true;
+
+            if (!foundInRow && !foundInCol) {
+              rowColEliminatedAll = false;
+              break;
+            }
+          }
+
+          const reason = rowColEliminatedAll
+            ? `The intersecting row and column leave ${val} as the only option left.`
+            : `The intersecting row, column, and region leave ${val} as the only option left.`;
+
+          return { row: r, col: c, value: val, reason };
+        }
+      }
+    }
+  }
+
+  // Fallback: No logical move found
+  // We can just pick the first empty cell and give the solution value, but warn user.
+  // Or strictly follow instructions: "No logical move found..."
+  // But the UI expects a hint to highlight a cell.
+  // If we return null, nothing happens?
+  // The interface expects { row, col, value, reason } or null.
+  // If I return null, the "Hint" button does nothing?
+  // The user said: "return message = ..."
+  // But my return type is structured.
+  // I will return a special hint that highlights a random empty cell (or first one) but gives the fallback message.
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (grid[r][c] === null) {
+         return {
+           row: r,
+           col: c,
+           value: solution[r][c] as number,
+           reason: "No logical move found based on basic deduction. You may need to guess."
+         };
+      }
+    }
+  }
+
   return null;
 };
 export const getConflictingCells = (grid: Grid): Set<string> => {
