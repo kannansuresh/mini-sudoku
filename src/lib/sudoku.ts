@@ -1,0 +1,180 @@
+export type CellValue = 1 | 2 | 3 | 4 | 5 | 6 | null;
+export type Grid = CellValue[][];
+export type Difficulty = 'Easy' | 'Medium' | 'Hard';
+
+// 6x6 Grid, 3x2 Regions (3 rows, 2 columns)
+const ROWS = 6;
+const COLS = 6;
+// If I use 2 rows x 3 cols:
+// Region 0: (0,0) to (1,2)
+// Region 1: (0,3) to (1,5)
+// ...
+//
+// "3 x 2" usually implies Width x Height or Rows x Cols.
+// In Sudoku context, "3x2" often means 3 cells wide, 2 cells high.
+// Let's stick to the standard "Mini Sudoku" which is often 2x3 (2 rows, 3 cols) or 3x2 (3 rows, 2 cols).
+// I will implement 2 rows x 3 columns (Standard landscape rectangles) as it's more common for 6x6.
+// BUT the user said "3 x2". I will assume 3 columns x 2 rows (Width x Height) which is 2 rows, 3 columns.
+// Or did they mean 3 rows, 2 columns?
+// Let's look at the prompt again: "6 regions (3 x2) grid".
+const BOX_HEIGHT = 2;
+const BOX_WIDTH = 3;
+
+export const createEmptyGrid = (): Grid => {
+  return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+};
+
+export const isValid = (grid: Grid, row: number, col: number, num: CellValue): boolean => {
+  if (num === null) return true;
+
+  // Check Row
+  for (let c = 0; c < COLS; c++) {
+    if (grid[row][c] === num && c !== col) return false;
+  }
+
+  // Check Column
+  for (let r = 0; r < ROWS; r++) {
+    if (grid[r][col] === num && r !== row) return false;
+  }
+
+  // Check Region
+  const startRow = Math.floor(row / BOX_HEIGHT) * BOX_HEIGHT;
+  const startCol = Math.floor(col / BOX_WIDTH) * BOX_WIDTH;
+
+  for (let r = 0; r < BOX_HEIGHT; r++) {
+    for (let c = 0; c < BOX_WIDTH; c++) {
+      if (grid[startRow + r][startCol + c] === num && (startRow + r !== row || startCol + c !== col)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
+
+export const solveSudoku = (grid: Grid): boolean => {
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      if (grid[row][col] === null) {
+        for (let num = 1; num <= 6; num++) {
+          if (isValid(grid, row, col, num as CellValue)) {
+            grid[row][col] = num as CellValue;
+            if (solveSudoku(grid)) return true;
+            grid[row][col] = null;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+};
+
+// Seeded Random Number Generator
+class SeededRandom {
+  private seed: number;
+
+  constructor(seed: number) {
+    this.seed = seed;
+  }
+
+  // Simple LCG
+  next(): number {
+    this.seed = (this.seed * 9301 + 49297) % 233280;
+    return this.seed / 233280;
+  }
+}
+
+let rng = new SeededRandom(Date.now());
+
+export const setSeed = (seed: number) => {
+  rng = new SeededRandom(seed);
+};
+
+// Helper to get random number using our RNG
+const getRandom = () => rng.next();
+
+export const generateSudoku = (difficulty: Difficulty): Grid => {
+  // 1. Create a full valid grid
+  const grid = createEmptyGrid();
+
+  // Randomize the first row to ensure randomness
+  const firstRow = [1, 2, 3, 4, 5, 6].sort(() => getRandom() - 0.5);
+  for(let c=0; c<6; c++) grid[0][c] = firstRow[c] as CellValue;
+
+  solveSudoku(grid);
+
+  // 2. Remove numbers based on difficulty
+  let attempts = 0;
+  let removeCount = 0;
+
+  switch (difficulty) {
+    case 'Easy': removeCount = 12; break;
+    case 'Medium': removeCount = 18; break;
+    case 'Hard': removeCount = 24; break;
+  }
+
+  const puzzle = grid.map(row => [...row]);
+
+  while (attempts < removeCount) {
+    const row = Math.floor(getRandom() * ROWS);
+    const col = Math.floor(getRandom() * COLS);
+
+    if (puzzle[row][col] !== null) {
+      puzzle[row][col] = null;
+      attempts++;
+    }
+  }
+
+  return puzzle;
+};
+
+export const getDailyDifficulty = (): Difficulty => {
+  // IST Time
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(utc + istOffset);
+
+  const day = istDate.getDay(); // 0 = Sunday, 1 = Monday, ...
+
+  // Mon(1), Tue(2), Wed(3) -> Easy
+  if (day >= 1 && day <= 3) return 'Easy';
+  // Thu(4), Fri(5) -> Medium
+  if (day === 4 || day === 5) return 'Medium';
+  // Sat(6), Sun(0) -> Hard
+  return 'Hard';
+};
+
+export const getDailySeed = (): number => {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(utc + istOffset);
+
+  // Create a seed from YYYYMMDD
+  const year = istDate.getFullYear();
+  const month = istDate.getMonth() + 1;
+  const date = istDate.getDate();
+
+  return year * 10000 + month * 100 + date;
+};
+
+
+export const getHint = (grid: Grid, solution: Grid): { row: number, col: number, value: number, reason: string } | null => {
+  // Find a cell that is empty
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (grid[r][c] === null) {
+        // Simple hint: just give the value
+        return {
+          row: r,
+          col: c,
+          value: solution[r][c] as number,
+          reason: "This is the only possible number here based on row, column and region rules."
+        };
+      }
+    }
+  }
+  return null;
+};
