@@ -8,7 +8,7 @@ export function HintMessage() {
   if (!activeHint) return null;
 
   return (
-    <div className="absolute bottom-20 left-0 right-0 z-50 mx-auto w-full max-w-md px-4">
+    <div className="absolute bottom-20 left-0 right-0 z-50 mx-auto w-full px-4">
       <div className="flex w-full items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-4 shadow-lg dark:border-yellow-900/50 dark:bg-yellow-950/90 dark:text-yellow-200 backdrop-blur-sm">
         <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-yellow-600 dark:text-yellow-400" />
         <div className="flex-1">

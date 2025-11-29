@@ -116,9 +116,10 @@ function App() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 p-4 font-sans text-neutral-900 dark:bg-neutral-950 dark:text-neutral-50">
-      <GameHeader />
+      <div className="w-fit flex flex-col items-center">
+        <GameHeader />
 
-      <main className="relative w-full max-w-md space-y-6">
+        <main className="relative w-full space-y-6">
         <div className="flex flex-col items-center justify-center gap-4">
           <SudokuGrid />
         </div>
@@ -133,6 +134,7 @@ function App() {
       <footer className="mt-8 text-center text-sm text-neutral-400">
         <p>Built with React, Tailwind CSS 4 & Shadcn UI</p>
       </footer>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,12 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Settings as SettingsIcon, X } from "lucide-react";
 import { useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // I need to add Switch component from Shadcn first.
 // I'll assume I'll add it in the next step or use a simple HTML checkbox for now if I don't want to run another command immediately.
@@ -16,9 +22,18 @@ export function SettingsModal() {
 
   if (!isOpen) {
     return (
-      <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
-        <SettingsIcon className="h-6 w-6" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(true)}>
+              <SettingsIcon className="h-6 w-6" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Settings</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 

@@ -54,9 +54,9 @@ export function Cell({ row, col, value, isInitial }: CellProps) {
         // Grid handles thick borders. Here we just do standard cell borders.
 
         // Background colors
-        isInitial ? "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100" : "bg-white text-blue-600 dark:bg-neutral-900 dark:text-blue-400",
+        isInitial ? "bg-neutral-200/50 text-neutral-950 font-semibold dark:bg-neutral-800 dark:text-neutral-50" : "bg-white text-blue-600 dark:bg-neutral-900 dark:text-blue-400",
         isSelected && "bg-blue-200 dark:bg-blue-900/50",
-        isHintTarget && "bg-yellow-200 ring-2 ring-yellow-400 dark:bg-yellow-900/50 dark:ring-yellow-600",
+        isHintTarget && "bg-yellow-200 ring-2 ring-inset ring-yellow-400 dark:bg-yellow-900/50 dark:ring-yellow-600",
         !isSelected && !isHintTarget && settings.highlightSections && isRelated && "bg-purple-50 dark:bg-purple-900/20", // Changed to purple as requested
         !isSelected && !isHintTarget && isSameValue && value !== null && "bg-blue-100 dark:bg-blue-900/30",
 

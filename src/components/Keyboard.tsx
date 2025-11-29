@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { isValid } from "@/lib/sudoku";
 import type { CellValue } from "@/lib/sudoku";
+import { Undo2, Eraser } from "lucide-react";
 
 export function Keyboard() {
   const {
@@ -12,6 +13,7 @@ export function Keyboard() {
     clearCell,
     settings,
     grid,
+    initialGrid,
     selectedCell,
     status
   } = useGameStore();
@@ -48,8 +50,10 @@ export function Keyboard() {
 
   const renderNumberButton = (num: number) => {
     const finished = isFinished(num);
+    const isInitial = selectedCell && initialGrid[selectedCell.row][selectedCell.col] !== null;
     const disabled = (settings.hideFinishedNumber && finished) ||
-                     (settings.showAvailablePlacements && !isPlacementValid(num));
+                     (settings.showAvailablePlacements && !isPlacementValid(num)) ||
+                     isInitial;
 
     return (
       <Button
@@ -81,11 +85,12 @@ export function Keyboard() {
       {renderNumberButton(3)}
       <Button
         variant="secondary"
-        className="h-14 w-full sm:h-16"
+        className="h-14 w-full sm:h-16 flex flex-col items-center justify-center gap-1"
         onClick={undo}
         disabled={status === 'won'}
       >
-        Undo
+        <Undo2 className="h-5 w-5" />
+        <span className="text-xs">Undo</span>
       </Button>
 
       {/* Row 2: 4, 5, 6, Clear */}
@@ -94,11 +99,12 @@ export function Keyboard() {
       {renderNumberButton(6)}
       <Button
         variant="secondary"
-        className="h-14 w-full sm:h-16"
+        className="h-14 w-full sm:h-16 flex flex-col items-center justify-center gap-1"
         onClick={clearCell}
         disabled={status === 'won'}
       >
-        Clear
+        <Eraser className="h-5 w-5" />
+        <span className="text-xs">Erase</span>
       </Button>
     </div>
   );

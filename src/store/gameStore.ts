@@ -30,13 +30,14 @@ interface GameState {
   startGame: (difficulty: Difficulty, customGrid?: Grid) => void;
   startDailyGame: () => void;
   enterCreateMode: () => void;
-  validateAndStartCustomGame: () => void;
+  validateAndStartCustomGame: () => { success: boolean; error?: string };
   selectCell: (row: number, col: number) => void;
   showHint: () => void;
   clearHint: () => void;
   setCellValue: (value: CellValue) => void;
   toggleNote: (value: number) => void;
   undo: () => void;
+  resetGame: () => void;
   clearCell: () => void;
   toggleSettings: (setting: keyof GameSettings) => void;
   setNotesMode: (enabled: boolean) => void;
@@ -155,8 +156,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const solvable = solveSudoku(tempGrid);
 
     if (!solvable) {
-      alert("This puzzle is unsolvable or violates Sudoku rules!");
-      return;
+      return { success: false, error: "This puzzle is unsolvable or violates Sudoku rules!" };
     }
 
     // If solvable, start game
@@ -173,17 +173,59 @@ export const useGameStore = create<GameState>((set, get) => ({
       timer: 0,
       activeHint: null,
     });
+
+    return { success: true };
+  },
+
+  resetGame: () => {
+    const { initialGrid, status } = get();
+    if (status !== 'playing') return;
+
+    set({
+      grid: initialGrid.map(row => [...row]),
+      history: [initialGrid.map(row => [...row])],
+      historyPointer: 0,
+      notes: {},
+      selectedCell: null,
+      activeHint: null,
+      timer: 0,
+    });
+  },
+
+
+
+  checkWin: () => {
+    const { grid, solution } = get();
+    // Check if grid matches solution
+    // Or just check if valid and full
+    let isFull = true;
+    let isCorrect = true;
+
+    for(let r=0; r<6; r++) {
+      for(let c=0; c<6; c++) {
+        if (grid[r][c] === null) {
+          isFull = false;
+          break;
+        }
+        if (grid[r][c] !== solution[r][c]) {
+          isCorrect = false;
+        }
+      }
+    }
+
+    if (isFull && isCorrect) {
+      set({ status: 'won' });
+    }
   },
 
   selectCell: (row, col) => {
-    set({ selectedCell: { row, col }, activeHint: null }); // Clear hint on selection change
+    set({ selectedCell: { row, col }, activeHint: null });
   },
 
   showHint: () => {
     const { grid, solution, status } = get();
     if (status !== 'playing') return;
 
-    // Use existing getHint logic
     const hint = getHint(grid, solution);
     if (hint) {
       set({ activeHint: hint, selectedCell: { row: hint.row, col: hint.col } });
@@ -200,21 +242,17 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const { row, col } = selectedCell;
 
-    // Cannot edit initial cells
-    if (initialGrid[row][col] !== null) return;
+    set({ activeHint: null });
 
-    // If value is same, do nothing (or maybe toggle? No, usually input sets it)
+    if (initialGrid[row][col] !== null) return;
     if (grid[row][col] === value) return;
 
     const newGrid = grid.map(r => [...r]);
     newGrid[row][col] = value;
 
-    // Update history
     const newHistory = history.slice(0, historyPointer + 1);
     newHistory.push(newGrid.map(r => [...r]));
 
-    // Clear notes in this cell and related row/col/region if needed (optional feature)
-    // For now just clear notes in this cell
     const newNotes = { ...get().notes };
     delete newNotes[`${row}-${col}`];
 
@@ -229,8 +267,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   toggleNote: (value) => {
-    const { selectedCell, initialGrid, notes } = get();
-    if (!selectedCell) return;
+    const { selectedCell, initialGrid, notes, status } = get();
+    if (!selectedCell || status !== 'playing') return;
+
+    set({ activeHint: null });
+
     const { row, col } = selectedCell;
 
     if (initialGrid[row][col] !== null) return;
@@ -302,30 +343,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   tickTimer: () => {
     if (get().status === 'playing') {
       set(state => ({ timer: state.timer + 1 }));
-    }
-  },
-
-  checkWin: () => {
-    const { grid, solution } = get();
-    // Check if grid matches solution
-    // Or just check if valid and full
-    let isFull = true;
-    let isCorrect = true;
-
-    for(let r=0; r<6; r++) {
-      for(let c=0; c<6; c++) {
-        if (grid[r][c] === null) {
-          isFull = false;
-          break;
-        }
-        if (grid[r][c] !== solution[r][c]) {
-          isCorrect = false;
-        }
-      }
-    }
-
-    if (isFull && isCorrect) {
-      set({ status: 'won' });
     }
   }
 }));
