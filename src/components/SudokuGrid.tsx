@@ -1,9 +1,16 @@
 import { useGameStore } from "@/store/gameStore";
 import { Cell } from "./Cell";
 import { cn } from "@/lib/utils";
+import { getConflictingCells } from "@/lib/sudoku";
+import { useMemo } from "react";
 
 export function SudokuGrid() {
-  const { grid, initialGrid } = useGameStore();
+  const { grid, initialGrid, settings } = useGameStore();
+
+  const conflictingCells = useMemo(() => {
+    if (!settings.autocheck) return new Set<string>();
+    return getConflictingCells(grid);
+  }, [grid, settings.autocheck]);
 
   if (!grid || grid.length === 0) return null;
 
@@ -28,6 +35,7 @@ export function SudokuGrid() {
                 col={colIndex}
                 value={value}
                 isInitial={initialGrid[rowIndex][colIndex] !== null}
+                isConflict={conflictingCells.has(`${rowIndex}-${colIndex}`)}
               />
             </div>
           ))}

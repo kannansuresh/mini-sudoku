@@ -178,3 +178,65 @@ export const getHint = (grid: Grid, solution: Grid): { row: number, col: number,
   }
   return null;
 };
+export const getConflictingCells = (grid: Grid): Set<string> => {
+  const conflicts = new Set<string>();
+
+  // Check Rows
+  for (let r = 0; r < ROWS; r++) {
+    const seen = new Map<number, number[]>();
+    for (let c = 0; c < COLS; c++) {
+      const val = grid[r][c];
+      if (val !== null) {
+        if (!seen.has(val)) seen.set(val, []);
+        seen.get(val)!.push(c);
+      }
+    }
+    seen.forEach((cols) => {
+      if (cols.length > 1) {
+        cols.forEach((c) => conflicts.add(`${r}-${c}`));
+      }
+    });
+  }
+
+  // Check Columns
+  for (let c = 0; c < COLS; c++) {
+    const seen = new Map<number, number[]>();
+    for (let r = 0; r < ROWS; r++) {
+      const val = grid[r][c];
+      if (val !== null) {
+        if (!seen.has(val)) seen.set(val, []);
+        seen.get(val)!.push(r);
+      }
+    }
+    seen.forEach((rows) => {
+      if (rows.length > 1) {
+        rows.forEach((r) => conflicts.add(`${r}-${c}`));
+      }
+    });
+  }
+
+  // Check Regions
+  for (let br = 0; br < ROWS; br += BOX_HEIGHT) {
+    for (let bc = 0; bc < COLS; bc += BOX_WIDTH) {
+      const seen = new Map<number, {r: number, c: number}[]>();
+      for (let r = 0; r < BOX_HEIGHT; r++) {
+        for (let c = 0; c < BOX_WIDTH; c++) {
+          const row = br + r;
+          const col = bc + c;
+          const val = grid[row][col];
+          if (val !== null) {
+            if (!seen.has(val)) seen.set(val, []);
+            seen.get(val)!.push({r: row, c: col});
+          }
+        }
+      }
+      seen.forEach((cells) => {
+        if (cells.length > 1) {
+          cells.forEach(({r, c}) => conflicts.add(`${r}-${c}`));
+        }
+      });
+    }
+  }
+
+  return conflicts;
+};
