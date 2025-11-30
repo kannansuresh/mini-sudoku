@@ -11,6 +11,7 @@ interface GameSettings {
   hideFinishedNumber: boolean;
   notesMode: boolean;
   skipStartOverlay: boolean;
+  defaultMode: 'daily' | 'easy' | 'medium' | 'hard';
 }
 
 interface GameState {
@@ -39,6 +40,7 @@ interface GameState {
   }>;
 
   // Actions
+  initializeGame: () => void;
   startGame: (difficulty: Difficulty, customGrid?: Grid) => void;
   startDailyGame: (date?: Date) => void;
   confirmStartGame: () => void;
@@ -70,6 +72,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   hideFinishedNumber: false,
   notesMode: false,
   skipStartOverlay: false,
+  defaultMode: 'daily',
 };
 
 import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
@@ -106,6 +109,40 @@ export const useGameStore = create<GameState>()(
       hasMadeMoves: false,
       dailyDate: null,
       dailyProgress: {},
+
+
+
+      initializeGame: () => {
+        const { settings, dailyProgress, status, dailyDate, difficulty } = get();
+        const today = new Date();
+        const dateKey = today.toISOString().split('T')[0];
+
+        if (settings.defaultMode === 'daily') {
+          const isTodayCompleted = dailyProgress[dateKey]?.status === 'won';
+
+          if (isTodayCompleted) {
+            // If today is completed, fallback to Medium
+            const isMediumActive = difficulty === 'Medium' && !dailyDate && status !== 'won' && status !== 'idle';
+            if (!isMediumActive) {
+              get().startGame('Medium');
+            }
+          } else {
+            // Start/Resume Daily
+            const isTodayDailyActive = dailyDate && dailyDate.toISOString().split('T')[0] === dateKey && status !== 'idle';
+            if (!isTodayDailyActive) {
+              get().startDailyGame(today);
+            }
+          }
+        } else {
+          // Easy / Medium / Hard
+          const targetDiff = (settings.defaultMode.charAt(0).toUpperCase() + settings.defaultMode.slice(1)) as Difficulty;
+          const isTargetActive = difficulty === targetDiff && !dailyDate && status !== 'won' && status !== 'idle';
+
+          if (!isTargetActive) {
+            get().startGame(targetDiff);
+          }
+        }
+      },
 
       startGame: (difficulty, customGrid) => {
         // Reset seed to random for normal games
@@ -148,7 +185,7 @@ export const useGameStore = create<GameState>()(
       startDailyGame: (date?: Date) => {
         const targetDate = date || new Date();
         const dateKey = targetDate.toISOString().split('T')[0];
-        const { dailyProgress, settings } = get();
+        const { dailyProgress } = get();
 
         const seed = getDailySeed(targetDate);
         const difficulty = getDailyDifficulty(targetDate);
@@ -171,7 +208,7 @@ export const useGameStore = create<GameState>()(
             history: saved.history,
             historyPointer: saved.historyPointer,
             difficulty,
-            status: saved.status === 'won' ? 'won' : (settings.skipStartOverlay ? 'playing' : 'ready'),
+            status: 'ready', // Always show banner for daily challenge
             timer: saved.timer,
             hasMadeMoves: true,
             dailyDate: targetDate,
@@ -186,7 +223,7 @@ export const useGameStore = create<GameState>()(
             history: [puzzle.map(row => [...row])],
             historyPointer: 0,
             difficulty,
-            status: settings.skipStartOverlay ? 'playing' : 'ready',
+            status: 'ready', // Always show banner for daily challenge
             timer: 0,
             hasMadeMoves: false,
             dailyDate: targetDate,
@@ -196,6 +233,25 @@ export const useGameStore = create<GameState>()(
 
       confirmStartGame: () => {
         set({ status: 'playing' });
+
+        // Save initial progress for daily games so timer starts counting
+        const { dailyDate, dailyProgress, grid, history, historyPointer, timer, notes } = get();
+        if (dailyDate) {
+          const dateKey = dailyDate.toISOString().split('T')[0];
+          set({
+            dailyProgress: {
+              ...dailyProgress,
+              [dateKey]: {
+                grid,
+                history,
+                historyPointer,
+                timer,
+                status: 'playing',
+                notes,
+              }
+            }
+          });
+        }
       },
 
       enterCreateMode: () => {
@@ -498,8 +554,27 @@ export const useGameStore = create<GameState>()(
       },
 
       tickTimer: () => {
-        if (get().status === 'playing') {
-          set(state => ({ timer: state.timer + 1 }));
+        const { status, dailyDate, dailyProgress, timer } = get();
+        if (status === 'playing') {
+          const newTime = timer + 1;
+          set({ timer: newTime });
+
+          // Sync timer to daily progress
+          if (dailyDate) {
+            const dateKey = dailyDate.toISOString().split('T')[0];
+            // Only update if entry exists (it should, from confirmStartGame or previous save)
+            if (dailyProgress[dateKey]) {
+               set({
+                dailyProgress: {
+                  ...dailyProgress,
+                  [dateKey]: {
+                    ...dailyProgress[dateKey],
+                    timer: newTime
+                  }
+                }
+              });
+            }
+          }
         }
       }
     }),

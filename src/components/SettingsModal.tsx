@@ -1,6 +1,14 @@
 import { useGameStore } from "@/store/gameStore";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Settings as SettingsIcon, X, Save } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -71,6 +79,31 @@ export function SettingsModal() {
             checked={localSettings.showClock}
             onChange={() => handleToggle('showClock')}
           />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label className="text-base">Default Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Game mode to start on load
+              </p>
+            </div>
+            <Select
+              value={localSettings.defaultMode}
+              onValueChange={(value: 'daily' | 'easy' | 'medium' | 'hard') =>
+                setLocalSettings(prev => ({ ...prev, defaultMode: value }))
+              }
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Select mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Daily Challenge</SelectItem>
+                <SelectItem value="easy">Easy</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="hard">Hard</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">Autocheck</p>
@@ -118,7 +151,7 @@ export function SettingsModal() {
           />
           <SettingToggle
             label="Skip Start Banner"
-            description="Start game immediately"
+            description="Start games immediately without the overlay (not applicable for Daily Challenge)"
             checked={localSettings.skipStartOverlay}
             onChange={() => handleToggle('skipStartOverlay')}
           />

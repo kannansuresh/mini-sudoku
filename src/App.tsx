@@ -9,14 +9,12 @@ import confetti from "canvas-confetti";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 function App() {
-  const { status, startGame, setCellValue, undo, clearCell, selectedCell, selectCell, toggleNote } = useGameStore();
+  const { status, initializeGame, setCellValue, undo, clearCell, selectedCell, selectCell, toggleNote } = useGameStore();
 
   useEffect(() => {
-    // Start a game on load if not playing
-    if (status === 'idle') {
-      startGame('Easy');
-    }
-  }, [status, startGame]);
+    // Initialize game based on settings (default mode)
+    initializeGame();
+  }, [initializeGame]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

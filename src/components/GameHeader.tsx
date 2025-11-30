@@ -125,7 +125,9 @@ export function GameHeader() {
                     handleNewGame(
                       () => useGameStore.getState().startDailyGame(date),
                       "Start Daily Challenge?",
-                      `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your current progress will be lost.`
+                      dailyDate
+                        ? `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your progress will be saved up until now including elapsed time.`
+                        : `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your current progress will be lost.`
                     );
                   }
                 }}
@@ -147,7 +149,9 @@ export function GameHeader() {
                         handleNewGame(
                           () => useGameStore.getState().startDailyGame(new Date()),
                           "Start Daily Challenge?",
-                          `Are you sure you want to start the Daily Challenge for today? Your current progress will be lost.`
+                          dailyDate
+                            ? "Are you sure you want to start the Daily Challenge for today? Your progress will be saved up until now including elapsed time."
+                            : "Are you sure you want to start the Daily Challenge for today? Your current progress will be lost."
                         );
                       }}
                     >
@@ -181,7 +185,9 @@ export function GameHeader() {
                 onClick={() => handleNewGame(
                   () => useGameStore.getState().enterCreateMode(),
                   "Create Custom Puzzle?",
-                  "Are you sure you want to create a custom puzzle? Your current progress will be lost."
+                  dailyDate
+                    ? "Are you sure you want to create a custom puzzle? Your progress will be saved up until now including elapsed time."
+                    : "Are you sure you want to create a custom puzzle? Your current progress will be lost."
                 )}
               >
                 <PenLine className="h-5 w-5" />
@@ -210,7 +216,9 @@ export function GameHeader() {
                 <DropdownMenuItem key={d} onClick={() => handleNewGame(
                   () => startGame(d),
                   "Start New Game?",
-                  `Are you sure you want to start a new ${d} game? Your current progress will be lost.`
+                  dailyDate
+                    ? `Are you sure you want to start a new ${d} game? Your progress will be saved up until now including elapsed time.`
+                    : `Are you sure you want to start a new ${d} game? Your current progress will be lost.`
                 )}>
                   {d}
                 </DropdownMenuItem>
