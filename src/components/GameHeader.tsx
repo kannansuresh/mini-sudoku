@@ -164,17 +164,19 @@ export function GameHeader() {
       </div>
 
       {/* Info Row (Difficulty & Timer) */}
-      <div className="flex w-full items-center justify-between px-2 mt-2">
-        <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-          {status === 'playing' ? difficulty : 'Select a game'}
-        </div>
-
-        {settings.showClock && (
-          <div className="font-mono text-lg font-medium tabular-nums text-neutral-600 dark:text-neutral-400">
-            {formatTime(timer)}
+      {status !== 'creating' && (
+        <div className="flex w-full items-center justify-between px-2 mt-2">
+          <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+            {status === 'playing' ? difficulty : 'Select a game'}
           </div>
-        )}
-      </div>
+
+          {settings.showClock && (
+            <div className="font-mono text-lg font-medium tabular-nums text-neutral-600 dark:text-neutral-400">
+              {formatTime(timer)}
+            </div>
+          )}
+        </div>
+      )}
 
       <AlertDialog open={!!pendingAction} onOpenChange={(open) => !open && setPendingAction(null)}>
         <AlertDialogContent>
