@@ -171,7 +171,7 @@ export function ImageImportModal({ isOpen, onClose, onScanComplete }: ImageImpor
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="relative h-[300px] w-full overflow-hidden rounded-lg bg-black">
+              <div className="relative h-[300px] w-full overflow-hidden rounded-lg bg-black group">
                 <Cropper
                   image={imageSrc}
                   crop={crop}
@@ -181,6 +181,17 @@ export function ImageImportModal({ isOpen, onClose, onScanComplete }: ImageImpor
                   onCropComplete={onCropComplete}
                   onZoomChange={setZoom}
                 />
+                <div className="absolute top-2 right-2">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={reset}
+                    className="h-8 w-8 rounded-full shadow-md bg-white/90 hover:bg-white dark:bg-neutral-900/90 dark:hover:bg-neutral-900 backdrop-blur-sm"
+                    title="Clear Image"
+                  >
+                    <Trash2 className="h-4 w-4 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200" />
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -193,13 +204,6 @@ export function ImageImportModal({ isOpen, onClose, onScanComplete }: ImageImpor
                   onValueChange={(value) => setZoom(value[0])}
                   className="flex-1"
                 />
-              </div>
-
-              <div className="flex justify-end">
-                 <Button variant="outline" size="sm" onClick={reset} className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50 border-red-200 dark:border-red-900/50">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear Image
-                </Button>
               </div>
             </div>
           )}
