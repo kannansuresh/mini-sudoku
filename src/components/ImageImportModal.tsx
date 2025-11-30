@@ -30,10 +30,37 @@ export function ImageImportModal({ isOpen, onClose, onScanComplete }: ImageImpor
   const [isScanning, setIsScanning] = useState(false);
   const [isMac, setIsMac] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canPaste, setCanPaste] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
+
+    const checkPermission = async () => {
+      if (!navigator.clipboard) {
+        setCanPaste(false);
+        return;
+      }
+
+      try {
+        // Some browsers (like Firefox) don't support 'clipboard-read' in query
+        // so we default to true if navigator.clipboard exists, unless explicitly denied
+        const permission = await navigator.permissions.query({ name: 'clipboard-read' as PermissionName });
+        if (permission.state === 'denied') {
+          setCanPaste(false);
+        }
+
+        permission.addEventListener('change', () => {
+          setCanPaste(permission.state !== 'denied');
+        });
+      } catch (e) {
+        // If query fails (e.g. Firefox), assume we can try to paste
+        // The read() call will handle the actual permission prompt
+        setCanPaste(true);
+      }
+    };
+
+    checkPermission();
   }, []);
 
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
@@ -154,20 +181,24 @@ export function ImageImportModal({ isOpen, onClose, onScanComplete }: ImageImpor
                   className="hidden"
                 />
               </div>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-neutral-200 dark:border-neutral-800" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-neutral-500 dark:bg-neutral-950">Or</span>
-                </div>
-              </div>
-              <div className="flex justify-center">
-                <Button variant="outline" size="sm" onClick={handleClipboardRead}>
-                  <Clipboard className="mr-2 h-4 w-4" />
-                  Load from Clipboard
-                </Button>
-              </div>
+              {canPaste && (
+                <>
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-neutral-200 dark:border-neutral-800" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-white px-2 text-neutral-500 dark:bg-neutral-950">Or</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <Button variant="outline" size="sm" onClick={handleClipboardRead}>
+                      <Clipboard className="mr-2 h-4 w-4" />
+                      Load from Clipboard
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
