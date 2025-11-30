@@ -1,6 +1,6 @@
 import { useGameStore } from "@/store/gameStore";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Pencil, X } from "lucide-react";
+import { Lightbulb, Pencil, X, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -42,12 +42,14 @@ export function Controls() {
   if (status === 'creating') {
     return (
       <>
-        <div className="flex w-full gap-2">
+        <div className="flex w-full gap-2 min-h-[48px]">
           <Button
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            variant="ghost"
+            className="w-full h-auto py-2 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-900/50"
             onClick={handleStartGame}
           >
-            Start Game
+            <Play className="mr-2 h-4 w-4 fill-current" />
+            <span className="font-semibold">Start Game</span>
           </Button>
         </div>
 

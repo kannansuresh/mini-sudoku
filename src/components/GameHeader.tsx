@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 
 export function GameHeader() {
-  const { timer, settings, tickTimer, startGame, status, difficulty, resetGame } = useGameStore();
+  const { timer, settings, tickTimer, startGame, status, difficulty, resetGame, hasMadeMoves } = useGameStore();
   const [pendingAction, setPendingAction] = useState<{ action: () => void, message: string, title: string } | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -51,7 +51,8 @@ export function GameHeader() {
   };
 
   const handleNewGame = (action: () => void, title: string, message: string) => {
-    if (status === 'playing') {
+    // Only ask for confirmation if game is in progress AND moves have been made
+    if (status === 'playing' && hasMadeMoves) {
       setPendingAction({ action, title, message });
     } else {
       action();

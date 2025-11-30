@@ -10,6 +10,7 @@ interface GameSettings {
   showAvailablePlacements: boolean;
   hideFinishedNumber: boolean;
   notesMode: boolean;
+  skipStartOverlay: boolean;
 }
 
 interface GameState {
@@ -21,15 +22,17 @@ interface GameState {
   history: Grid[];
   historyPointer: number; // Current position in history
   difficulty: Difficulty;
-  status: 'idle' | 'playing' | 'won' | 'creating';
+  status: 'idle' | 'ready' | 'playing' | 'won' | 'creating';
   timer: number;
   settings: GameSettings;
   activeHint: { row: number; col: number; value: number; reason: string } | null;
   tempNotesMode: boolean;
+  hasMadeMoves: boolean;
 
   // Actions
   startGame: (difficulty: Difficulty, customGrid?: Grid) => void;
   startDailyGame: () => void;
+  confirmStartGame: () => void;
   enterCreateMode: () => void;
   validateAndStartCustomGame: () => { success: boolean; error?: string };
   selectCell: (row: number, col: number) => void;
@@ -55,6 +58,7 @@ const DEFAULT_SETTINGS: GameSettings = {
   showAvailablePlacements: false,
   hideFinishedNumber: false,
   notesMode: false,
+  skipStartOverlay: false,
 };
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -71,6 +75,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   activeHint: null,
   tempNotesMode: false,
+  hasMadeMoves: false,
 
   startGame: (difficulty, customGrid) => {
     // Reset seed to random for normal games
@@ -92,6 +97,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Deep copy for initial state
     const initial = puzzle.map(row => [...row]);
 
+    const { settings } = get();
+
     set({
       grid: puzzle,
       solution: solution,
@@ -101,8 +108,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       history: [puzzle.map(row => [...row])],
       historyPointer: 0,
       difficulty,
-      status: 'playing',
+      status: settings.skipStartOverlay ? 'playing' : 'ready',
       timer: 0,
+      hasMadeMoves: false,
     });
   },
 
@@ -118,6 +126,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const initial = puzzle.map(row => [...row]);
 
+    const { settings } = get();
+
     set({
       grid: puzzle,
       solution: solution,
@@ -127,9 +137,14 @@ export const useGameStore = create<GameState>((set, get) => ({
       history: [puzzle.map(row => [...row])],
       historyPointer: 0,
       difficulty,
-      status: 'playing',
+      status: settings.skipStartOverlay ? 'playing' : 'ready',
       timer: 0,
+      hasMadeMoves: false,
     });
+  },
+
+  confirmStartGame: () => {
+    set({ status: 'playing' });
   },
 
   enterCreateMode: () => {
@@ -140,11 +155,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       initialGrid: empty,
       notes: {},
       selectedCell: null,
-      history: [],
-      historyPointer: -1,
+      history: [empty.map(row => [...row])],
+      historyPointer: 0,
       status: 'creating',
       timer: 0,
       activeHint: null,
+      hasMadeMoves: false,
     });
   },
 
@@ -172,9 +188,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       initialGrid: initial,
       history: [grid.map(row => [...row])],
       historyPointer: 0,
-      status: 'playing',
+      status: 'ready', // Start in ready state
       timer: 0,
       activeHint: null,
+      hasMadeMoves: false,
     });
 
     return { success: true };
@@ -192,6 +209,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       selectedCell: null,
       activeHint: null,
       timer: 0,
+      hasMadeMoves: false,
     });
   },
 
@@ -240,8 +258,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setCellValue: (value) => {
-    const { grid, selectedCell, initialGrid, history, historyPointer } = get();
+    const { grid, selectedCell, initialGrid, history, historyPointer, status } = get();
     if (!selectedCell) return;
+
+    // Allow in playing or creating
+    if (status !== 'playing' && status !== 'creating') return;
 
     const { row, col } = selectedCell;
 
@@ -264,14 +285,20 @@ export const useGameStore = create<GameState>((set, get) => ({
       history: newHistory,
       historyPointer: newHistory.length - 1,
       notes: newNotes,
+      hasMadeMoves: true,
     });
 
-    get().checkWin();
+    if (status === 'playing') {
+      get().checkWin();
+    }
   },
 
   toggleNote: (value) => {
     const { selectedCell, initialGrid, notes, status } = get();
-    if (!selectedCell || status !== 'playing') return;
+    if (!selectedCell) return;
+
+    // Allow in playing or creating
+    if (status !== 'playing' && status !== 'creating') return;
 
     set({ activeHint: null });
 
@@ -296,7 +323,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       newNotes[key] = newNotesList;
     }
 
-    set({ notes: newNotes });
+    set({ notes: newNotes, hasMadeMoves: true });
   },
 
   undo: () => {
@@ -306,6 +333,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({
         grid: history[newPointer].map(r => [...r]),
         historyPointer: newPointer,
+        hasMadeMoves: true, // Undo counts as a move/interaction
       });
     }
   },
@@ -338,6 +366,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       history: newHistory,
       historyPointer: newHistory.length - 1,
       notes: newNotes,
+      hasMadeMoves: true,
     });
   },
 

@@ -24,7 +24,7 @@ function App() {
         useGameStore.getState().setTempNotesMode(true);
       }
 
-      if (status !== 'playing') return;
+      if (status !== 'playing' && status !== 'creating') return;
 
       // Numbers 1-6
       if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {

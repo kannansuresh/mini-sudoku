@@ -84,6 +84,12 @@ export function SettingsModal() {
             checked={settings.hideFinishedNumber}
             onChange={() => toggleSettings('hideFinishedNumber')}
           />
+          <SettingToggle
+            label="Skip Start Banner"
+            description="Start game immediately"
+            checked={settings.skipStartOverlay}
+            onChange={() => toggleSettings('skipStartOverlay')}
+          />
         </div>
 
         <div className="mt-8 text-center text-sm text-neutral-500">
