@@ -8,6 +8,7 @@ import {
   createGameSession,
   updateGameProgress,
   getDailyChallengeSession,
+  getAllDailySessions,
   GameStatus,
   DefaultGameMode,
   Difficulty,
@@ -39,11 +40,13 @@ interface GameState {
   player: Player | null;
   sessionId: number | null;
   mistakes: number;
+  dailyHistory: GameSession[];
   initialized: boolean;
   isInitializing: boolean;
 
   // Actions
   initializeStore: () => Promise<void>;
+  loadDailyHistory: () => Promise<void>;
   startGame: (difficulty: Difficulty, customGrid?: Grid) => Promise<void>;
   startDailyGame: (date?: Date) => Promise<void>;
   confirmStartGame: () => void;
@@ -99,9 +102,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   player: null,
   sessionId: null,
   mistakes: 0,
+  dailyHistory: [],
   initialized: false,
   isInitializing: false,
 
+  loadDailyHistory: async () => {
+    const { player } = get();
+    if (!player) return;
+    const history = await getAllDailySessions(player.id);
+    set({ dailyHistory: history });
+  },
 
   initializeStore: async () => {
     const { initialized, isInitializing } = get();

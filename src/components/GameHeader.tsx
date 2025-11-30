@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/popover";
 
 export function GameHeader() {
-  const { timer, settings, tickTimer, startGame, status, difficulty, resetGame, hasMadeMoves, dailyDate } = useGameStore();
+  const { timer, settings, tickTimer, startGame, status, difficulty, resetGame, hasMadeMoves, dailyDate, dailyHistory, loadDailyHistory } = useGameStore();
   const [pendingAction, setPendingAction] = useState<{ action: () => void, message: string, title: string } | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -74,6 +74,24 @@ export function GameHeader() {
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
+  useEffect(() => {
+    loadDailyHistory();
+  }, [loadDailyHistory]);
+
+  const getTodayStatus = () => {
+    const today = new Date();
+    const todaySession = dailyHistory.find(s => {
+      if (!s.targetDate) return false;
+      const d = new Date(s.targetDate);
+      return d.getDate() === today.getDate() &&
+             d.getMonth() === today.getMonth() &&
+             d.getFullYear() === today.getFullYear();
+    });
+    return todaySession?.status;
+  };
+
+  const todayStatus = getTodayStatus();
+
   return (
     <header className="flex w-full flex-col gap-4 mb-4">
       {/* Title Row */}
@@ -102,12 +120,17 @@ export function GameHeader() {
             </TooltipContent>
           </Tooltip>
 
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+          <Popover open={isCalendarOpen} onOpenChange={(open) => {
+            setIsCalendarOpen(open);
+            if (open) {
+              loadDailyHistory();
+            }
+          }}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <PopoverTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <Calendar className="h-5 w-5" />
+                    <Calendar className={`h-5 w-5 ${todayStatus === 'In Progress' ? 'text-amber-600 dark:text-amber-400' : todayStatus === 'Completed' ? 'text-green-600 dark:text-green-400' : ''}`} />
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
@@ -160,16 +183,25 @@ export function GameHeader() {
                   </div>
                 }
                 modifiers={{
-                  played: (_date) => {
-                    // This logic needs to be updated to check DB or store state if we load all history.
-                    // For now, we might not have all daily progress in store.
-                    // We need a way to check if a daily challenge was played.
-                    // Since we removed dailyProgress from store, this feature is temporarily broken unless we fetch it.
-                    // For now, let's disable this visual indicator or implement a fetch.
-                    return false;
+                  played: (date) => {
+                    return dailyHistory.some(s => {
+                      if (!s.targetDate) return false;
+                      const d = new Date(s.targetDate);
+                      return d.getDate() === date.getDate() &&
+                             d.getMonth() === date.getMonth() &&
+                             d.getFullYear() === date.getFullYear() &&
+                             s.status === 'In Progress';
+                    });
                   },
-                  won: (_date) => {
-                    return false;
+                  won: (date) => {
+                    return dailyHistory.some(s => {
+                      if (!s.targetDate) return false;
+                      const d = new Date(s.targetDate);
+                      return d.getDate() === date.getDate() &&
+                             d.getMonth() === date.getMonth() &&
+                             d.getFullYear() === date.getFullYear() &&
+                             s.status === 'Completed';
+                    });
                   }
                 }}
                 modifiersClassNames={{

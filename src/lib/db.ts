@@ -186,6 +186,14 @@ export const getDailyChallengeSession = async (playerId: number, date: Date) => 
   return sessions[0];
 };
 
+export const getAllDailySessions = async (playerId: number) => {
+  return await db.gameSessions
+    .where('player')
+    .equals(playerId)
+    .filter(s => s.type === GameType.Daily)
+    .toArray();
+};
+
 export const getActiveGameSession = async (playerId: number) => {
     return await db.gameSessions
         .where('player')
