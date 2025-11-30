@@ -39,6 +39,7 @@ interface GameState {
   // New DB related state
   player: Player | null;
   sessionId: number | null;
+  gameType: GameType;
   mistakes: number;
   dailyHistory: GameSession[];
   initialized: boolean;
@@ -49,7 +50,7 @@ interface GameState {
   loadDailyHistory: () => Promise<void>;
   startGame: (difficulty: Difficulty, customGrid?: Grid) => Promise<void>;
   startDailyGame: (date?: Date) => Promise<void>;
-  confirmStartGame: () => void;
+  confirmStartGame: () => Promise<void>;
   enterCreateMode: () => void;
   importGrid: (scannedGrid: (number | null)[][]) => void;
   validateAndStartCustomGame: () => { success: boolean; error?: string };
@@ -101,6 +102,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   dailyDate: null,
   player: null,
   sessionId: null,
+  gameType: GameType.Standard,
   mistakes: 0,
   dailyHistory: [],
   initialized: false,
@@ -185,23 +187,29 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const initial = puzzle.map(row => [...row]);
     const initialStateStr = JSON.stringify(initial);
+    const gameType = customGrid ? GameType.Custom : GameType.Standard;
 
-    // Create new session
-    const session: GameSession = {
-      player: player.id,
-      type: customGrid ? GameType.Custom : GameType.Standard,
-      status: settings.skipStartBanner ? GameStatus.InProgress : GameStatus.NotStarted, // 'ready' mapped to NotStarted/InProgress logic
-      difficulty,
-      elapsedTime: 0,
-      initialState: initialStateStr,
-      currentProgress: initialStateStr,
-      notes: JSON.stringify({}),
-      mistakes: 0,
-      score: 0,
-      startedAt: new Date(),
-    };
+    let sessionId: number | null = null;
 
-    const sessionId = await createGameSession(session);
+    if (settings.skipStartBanner) {
+      // Create new session immediately
+      const session: GameSession = {
+        player: player.id,
+        type: gameType,
+        status: GameStatus.InProgress,
+        difficulty,
+        elapsedTime: 0,
+        initialState: initialStateStr,
+        currentProgress: initialStateStr,
+        notes: JSON.stringify({}),
+        mistakes: 0,
+        score: 0,
+        startedAt: new Date(),
+      };
+
+      const id = await createGameSession(session);
+      sessionId = id ?? null;
+    }
 
     set({
       grid: puzzle,
@@ -217,12 +225,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       hasMadeMoves: false,
       dailyDate: null,
       sessionId,
+      gameType,
       mistakes: 0
     });
   },
 
   startDailyGame: async (date?: Date) => {
-    const { player } = get();
+    const { player, settings } = get();
     if (!player) return;
 
     const targetDate = date || new Date();
@@ -253,26 +262,32 @@ export const useGameStore = create<GameState>((set, get) => ({
         hasMadeMoves: existingSession.status !== GameStatus.NotStarted,
         dailyDate: targetDate,
         sessionId: existingSession.id!,
+        gameType: GameType.Daily,
         mistakes: existingSession.mistakes
       });
     } else {
       const initialStateStr = JSON.stringify(initial);
-      const session: GameSession = {
-        player: player.id,
-        type: GameType.Daily,
-        status: GameStatus.NotStarted,
-        difficulty,
-        elapsedTime: 0,
-        initialState: initialStateStr,
-        currentProgress: initialStateStr,
-        notes: JSON.stringify({}),
-        mistakes: 0,
-        score: 0,
-        targetDate: targetDate,
-        startedAt: new Date(),
-      };
+      let sessionId: number | null = null;
 
-      const sessionId = await createGameSession(session);
+      if (settings.skipStartBanner) {
+        const session: GameSession = {
+          player: player.id,
+          type: GameType.Daily,
+          status: GameStatus.NotStarted,
+          difficulty,
+          elapsedTime: 0,
+          initialState: initialStateStr,
+          currentProgress: initialStateStr,
+          notes: JSON.stringify({}),
+          mistakes: 0,
+          score: 0,
+          targetDate: targetDate,
+          startedAt: new Date(),
+        };
+
+        const id = await createGameSession(session);
+        sessionId = id ?? null;
+      }
 
       set({
         grid: puzzle,
@@ -288,17 +303,40 @@ export const useGameStore = create<GameState>((set, get) => ({
         hasMadeMoves: false,
         dailyDate: targetDate,
         sessionId,
+        gameType: GameType.Daily,
         mistakes: 0
       });
     }
   },
 
-  confirmStartGame: () => {
+  confirmStartGame: async () => {
     set({ status: GameStatus.InProgress });
-    const { sessionId, grid, notes, timer, mistakes } = get();
+    const { sessionId, grid, notes, timer, mistakes, player, gameType, difficulty, dailyDate, initialGrid } = get();
 
-    // Save status change
-    if (sessionId) {
+    if (!player) return;
+
+    if (!sessionId) {
+      // Create session now
+      const initialStateStr = JSON.stringify(initialGrid);
+      const session: GameSession = {
+        player: player.id,
+        type: gameType,
+        status: GameStatus.InProgress,
+        difficulty,
+        elapsedTime: timer,
+        initialState: initialStateStr,
+        currentProgress: JSON.stringify(grid),
+        notes: JSON.stringify(notes),
+        mistakes,
+        score: 0,
+        startedAt: new Date(),
+        targetDate: dailyDate || undefined
+      };
+
+      const newSessionId = await createGameSession(session);
+      set({ sessionId: newSessionId });
+    } else {
+      // Save status change
       updateGameProgress(sessionId, {
         status: GameStatus.InProgress,
         currentProgress: JSON.stringify(grid),
@@ -360,29 +398,31 @@ export const useGameStore = create<GameState>((set, get) => ({
     const initial = grid.map(row => [...row]);
     const solution = tempGrid;
 
-    // Create session for custom game
-    // We need to do this async, but this function is sync in interface (or was).
-    // We can fire and forget or make it async. Let's make it fire and forget for now or just update state and let effect handle it?
-    // Better to just do it here.
-
     const initialStateStr = JSON.stringify(initial);
-    const session: GameSession = {
-      player: player.id,
-      type: GameType.Custom,
-      status: GameStatus.NotStarted,
-      difficulty: Difficulty.Medium, // Custom doesn't really have difficulty
-      elapsedTime: 0,
-      initialState: initialStateStr,
-      currentProgress: initialStateStr,
-      notes: JSON.stringify({}),
-      mistakes: 0,
-      score: 0,
-      startedAt: new Date(),
-    };
 
-    createGameSession(session).then(sessionId => {
-      set({ sessionId });
-    });
+    if (settings.skipStartBanner) {
+      const session: GameSession = {
+        player: player.id,
+        type: GameType.Custom,
+        status: GameStatus.InProgress,
+        difficulty: Difficulty.Medium, // Custom doesn't really have difficulty
+        elapsedTime: 0,
+        initialState: initialStateStr,
+        currentProgress: initialStateStr,
+        notes: JSON.stringify({}),
+        mistakes: 0,
+        score: 0,
+        startedAt: new Date(),
+      };
+
+      // We need to handle this async properly or fire-and-forget but update store later.
+      // Since validateAndStartCustomGame returns sync result, we can't await here easily without changing signature.
+      // But we can update store with sessionId when promise resolves.
+      createGameSession(session).then(id => {
+        set({ sessionId: id });
+      });
+      // For now, sessionId is null in store until promise resolves.
+    }
 
     set({
       solution: solution,
@@ -394,6 +434,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       activeHint: null,
       hasMadeMoves: false,
       dailyDate: null,
+      sessionId: null, // Will be updated if skipStartBanner is true
+      gameType: GameType.Custom,
       mistakes: 0
     });
 
