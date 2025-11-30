@@ -68,7 +68,7 @@ export interface GameSession {
   difficulty: Difficulty;
   elapsedTime: number;
 
-  // Grid Data: 36 characters (0-6), where 0 is empty
+  // Grid Data: JSON stringified Grid (number[][])
   initialState: string;
   currentProgress: string;
   notes: string; // JSON stringified Record<string, number[]>
@@ -98,34 +98,35 @@ db.version(1).stores({
 
 export const initDB = async () => {
   try {
-    // Check if Guest player exists
-    let guest = await db.players.where('userName').equals('guest').first();
+    return await db.transaction('rw', db.players, db.settings, async () => {
+      // Check if Guest player exists
+      let guest = await db.players.where('userName').equals('guest').first();
 
-    if (!guest) {
-      const guestId = await db.players.add({
-        userName: 'guest',
-        displayName: 'Guest'
-      });
-      guest = { id: guestId, userName: 'guest', displayName: 'Guest' };
+      if (!guest) {
+        const guestId = await db.players.add({
+          userName: 'guest',
+          displayName: 'Guest'
+        });
+        guest = { id: guestId, userName: 'guest', displayName: 'Guest' };
 
-      // Create default settings for guest
-      await db.settings.add({
-        player: guestId,
-        showTimer: true,
-        defaultMode: DefaultGameMode.Daily,
-        defaultDifficulty: Difficulty.Medium,
-        autoCheck: AutocheckModes.Conflicts,
-        highlightSections: true,
-        remainingCount: false,
-        showAvailablePlacements: false,
-        hideFilledNumbers: false,
-        skipStartBanner: false,
-        notesMode: false,
-        theme: 'system'
-      });
-    }
-
-    return guest;
+        // Create default settings for guest
+        await db.settings.add({
+          player: guestId,
+          showTimer: true,
+          defaultMode: DefaultGameMode.Daily,
+          defaultDifficulty: Difficulty.Medium,
+          autoCheck: AutocheckModes.Conflicts,
+          highlightSections: true,
+          remainingCount: false,
+          showAvailablePlacements: false,
+          hideFilledNumbers: false,
+          skipStartBanner: false,
+          notesMode: false,
+          theme: 'system'
+        });
+      }
+      return guest;
+    });
   } catch (error) {
     console.error("Failed to initialize DB:", error);
     throw error;

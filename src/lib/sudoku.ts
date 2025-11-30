@@ -706,15 +706,3 @@ export const getConflictingCells = (grid: Grid): Set<string> => {
 
   return conflicts;
 };
-export const gridToString = (grid: Grid): string => {
-  return grid.flat().map(c => c === null ? 0 : c).join('');
-};
-
-export const stringToGrid = (str: string): Grid => {
-  const flat = str.split('').map(c => c === '0' ? null : parseInt(c) as CellValue);
-  const grid: Grid = [];
-  for (let i = 0; i < 6; i++) {
-    grid.push(flat.slice(i * 6, (i + 1) * 6));
-  }
-  return grid;
-};

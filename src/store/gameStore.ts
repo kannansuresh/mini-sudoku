@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { generateSudoku, solveSudoku, createEmptyGrid, setSeed, getDailyDifficulty, getDailySeed, getHint, gridToString, stringToGrid } from '@/lib/sudoku';
+import { generateSudoku, solveSudoku, createEmptyGrid, setSeed, getDailyDifficulty, getDailySeed, getHint } from '@/lib/sudoku';
 import type { Grid, CellValue } from '@/lib/sudoku';
 import {
   initDB,
@@ -161,7 +161,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     const initial = puzzle.map(row => [...row]);
-    const initialStateStr = gridToString(initial);
+    const initialStateStr = JSON.stringify(initial);
 
     // Create new session
     const session: GameSession = {
@@ -217,12 +217,12 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     if (existingSession) {
       set({
-        grid: stringToGrid(existingSession.currentProgress),
+        grid: JSON.parse(existingSession.currentProgress),
         solution: solution,
         initialGrid: initial,
         notes: JSON.parse(existingSession.notes),
         selectedCell: null,
-        history: [stringToGrid(existingSession.currentProgress)], // History not fully persisted in schema, just current state
+        history: [JSON.parse(existingSession.currentProgress)], // History not fully persisted in schema, just current state
         historyPointer: 0,
         difficulty,
         status: existingSession.status === GameStatus.Completed ? GameStatus.Completed : GameStatus.NotStarted, // Always show banner for daily unless completed
@@ -233,7 +233,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         mistakes: existingSession.mistakes
       });
     } else {
-      const initialStateStr = gridToString(initial);
+      const initialStateStr = JSON.stringify(initial);
       const session: GameSession = {
         player: player.id,
         type: GameType.Daily,
@@ -278,7 +278,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (sessionId) {
       updateGameProgress(sessionId, {
         status: GameStatus.InProgress,
-        currentProgress: gridToString(grid),
+        currentProgress: JSON.stringify(grid),
         notes: JSON.stringify(notes),
         elapsedTime: timer,
         mistakes
@@ -342,7 +342,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // We can fire and forget or make it async. Let's make it fire and forget for now or just update state and let effect handle it?
     // Better to just do it here.
 
-    const initialStateStr = gridToString(initial);
+    const initialStateStr = JSON.stringify(initial);
     const session: GameSession = {
       player: player.id,
       type: GameType.Custom,
@@ -434,7 +434,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Save progress
     if (sessionId && status === GameStatus.InProgress) {
       updateGameProgress(sessionId, {
-        currentProgress: gridToString(newGrid),
+        currentProgress: JSON.stringify(newGrid),
         notes: JSON.stringify(newNotes),
         mistakes: newMistakes,
         elapsedTime: timer,
@@ -500,7 +500,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       // Save progress
       if (sessionId) {
         updateGameProgress(sessionId, {
-          currentProgress: gridToString(newGrid),
+          currentProgress: JSON.stringify(newGrid),
           elapsedTime: timer
         });
       }
@@ -541,7 +541,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Save progress
     if (sessionId && status === GameStatus.InProgress) {
       updateGameProgress(sessionId, {
-        currentProgress: gridToString(newGrid),
+        currentProgress: JSON.stringify(newGrid),
         notes: JSON.stringify(newNotes),
         elapsedTime: timer
       });
@@ -553,7 +553,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (status !== GameStatus.InProgress) return;
 
     const emptyNotes = {};
-    const initialGridStr = gridToString(initialGrid);
+    const initialGridStr = JSON.stringify(initialGrid);
 
     set({
       grid: initialGrid.map(row => [...row]),
@@ -562,7 +562,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       notes: emptyNotes,
       selectedCell: null,
       activeHint: null,
-      timer: 0,
+      // timer: 0, // Timer should not reset
       hasMadeMoves: false,
     });
 
@@ -570,8 +570,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       updateGameProgress(sessionId, {
         currentProgress: initialGridStr,
         notes: JSON.stringify(emptyNotes),
-        elapsedTime: 0,
-        mistakes: mistakes // Do we reset mistakes? Usually yes on reset.
+        // elapsedTime: 0, // Timer should not reset
+        mistakes: mistakes
       });
       // Actually, if we reset, we probably shouldn't reset mistakes if it's a strict mode, but for now let's keep mistakes?
       // User didn't specify. Standard reset usually resets everything.
