@@ -42,7 +42,8 @@ export function Controls() {
   };
 
   const [isImportOpen, setIsImportOpen] = useState(false);
-  const { importGrid } = useGameStore();
+  const { importGrid, resetGame } = useGameStore();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   if (status === 'creating') {
     return (
@@ -88,9 +89,6 @@ export function Controls() {
       </>
     );
   }
-
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const { resetGame } = useGameStore();
 
   return (
     <>
