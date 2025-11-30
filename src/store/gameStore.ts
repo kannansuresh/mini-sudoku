@@ -28,10 +28,11 @@ interface GameState {
   activeHint: { row: number; col: number; value: number; reason: string } | null;
   tempNotesMode: boolean;
   hasMadeMoves: boolean;
+  dailyDate: Date | null;
 
   // Actions
   startGame: (difficulty: Difficulty, customGrid?: Grid) => void;
-  startDailyGame: () => void;
+  startDailyGame: (date?: Date) => void;
   confirmStartGame: () => void;
   enterCreateMode: () => void;
   importGrid: (scannedGrid: (number | null)[][]) => void;
@@ -95,6 +96,7 @@ export const useGameStore = create<GameState>()(
       activeHint: null,
       tempNotesMode: false,
       hasMadeMoves: false,
+      dailyDate: null,
 
       startGame: (difficulty, customGrid) => {
         // Reset seed to random for normal games
@@ -130,12 +132,13 @@ export const useGameStore = create<GameState>()(
           status: settings.skipStartOverlay ? 'playing' : 'ready',
           timer: 0,
           hasMadeMoves: false,
+          dailyDate: null,
         });
       },
 
-      startDailyGame: () => {
-        const seed = getDailySeed();
-        const difficulty = getDailyDifficulty();
+      startDailyGame: (date?: Date) => {
+        const seed = getDailySeed(date);
+        const difficulty = getDailyDifficulty(date);
 
         setSeed(seed);
 
@@ -159,6 +162,7 @@ export const useGameStore = create<GameState>()(
           status: settings.skipStartOverlay ? 'playing' : 'ready',
           timer: 0,
           hasMadeMoves: false,
+          dailyDate: date || new Date(),
         });
       },
 
@@ -180,6 +184,7 @@ export const useGameStore = create<GameState>()(
           timer: 0,
           activeHint: null,
           hasMadeMoves: false,
+          dailyDate: null,
         });
       },
 
@@ -229,6 +234,7 @@ export const useGameStore = create<GameState>()(
           timer: 0,
           activeHint: null,
           hasMadeMoves: false,
+          dailyDate: null,
         });
 
         return { success: true };

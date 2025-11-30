@@ -235,9 +235,9 @@ const generateSudokuSimple = (difficulty: Difficulty): Grid => {
   return puzzle;
 };
 
-export const getDailyDifficulty = (): Difficulty => {
+export const getDailyDifficulty = (date?: Date): Difficulty => {
   // IST Time
-  const now = new Date();
+  const now = date || new Date();
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const istOffset = 5.5 * 60 * 60 * 1000;
   const istDate = new Date(utc + istOffset);
@@ -252,8 +252,8 @@ export const getDailyDifficulty = (): Difficulty => {
   return 'Hard';
 };
 
-export const getDailySeed = (): number => {
-  const now = new Date();
+export const getDailySeed = (date?: Date): number => {
+  const now = date || new Date();
   const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
   const istOffset = 5.5 * 60 * 60 * 1000;
   const istDate = new Date(utc + istOffset);
@@ -261,9 +261,9 @@ export const getDailySeed = (): number => {
   // Create a seed from YYYYMMDD
   const year = istDate.getFullYear();
   const month = istDate.getMonth() + 1;
-  const date = istDate.getDate();
+  const dateNum = istDate.getDate();
 
-  return year * 10000 + month * 100 + date;
+  return year * 10000 + month * 100 + dateNum;
 };
 
 // --- Solver & Generation Helpers ---

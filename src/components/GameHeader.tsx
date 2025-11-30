@@ -31,9 +31,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export function GameHeader() {
-  const { timer, settings, tickTimer, startGame, status, difficulty, resetGame, hasMadeMoves } = useGameStore();
+  const { timer, settings, tickTimer, startGame, status, difficulty, resetGame, hasMadeMoves, dailyDate } = useGameStore();
   const [pendingAction, setPendingAction] = useState<{ action: () => void, message: string, title: string } | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -66,6 +72,8 @@ export function GameHeader() {
     }
   };
 
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
   return (
     <header className="flex w-full flex-col gap-4 mb-4">
       {/* Title Row */}
@@ -94,24 +102,62 @@ export function GameHeader() {
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleNewGame(
-                  () => useGameStore.getState().startDailyGame(),
-                  "Start Daily Challenge?",
-                  "Are you sure you want to start the Daily Challenge? Your current progress will be lost."
-                )}
-              >
-                <Calendar className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Daily Challenge</p>
-            </TooltipContent>
-          </Tooltip>
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Calendar className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Daily Challenge</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={dailyDate ? new Date(dailyDate) : new Date()}
+                onSelect={(date: Date | undefined) => {
+                  if (date) {
+                    setIsCalendarOpen(false);
+                    handleNewGame(
+                      () => useGameStore.getState().startDailyGame(date),
+                      "Start Daily Challenge?",
+                      `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your current progress will be lost.`
+                    );
+                  }
+                }}
+                disabled={(date: Date) => date > new Date() || date < new Date("2025-11-21")}
+                startMonth={new Date("2025-11-01")}
+                endMonth={new Date()}
+                captionLayout="dropdown"
+                fromYear={2025}
+                toYear={new Date().getFullYear()}
+                initialFocus
+                footer={
+                  <div className="flex justify-center pt-3 border-t mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-7 text-xs font-normal"
+                      onClick={() => {
+                        setIsCalendarOpen(false);
+                        handleNewGame(
+                          () => useGameStore.getState().startDailyGame(new Date()),
+                          "Start Daily Challenge?",
+                          `Are you sure you want to start the Daily Challenge for today? Your current progress will be lost.`
+                        );
+                      }}
+                    >
+                      Go to Today
+                    </Button>
+                  </div>
+                }
+              />
+            </PopoverContent>
+          </Popover>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -180,7 +226,17 @@ export function GameHeader() {
       {status !== 'creating' && (
         <div className="flex w-full items-center justify-between px-2 mt-2">
           <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            {status === 'playing' ? difficulty : (status === 'ready' ? null : 'Select a game')}
+            {status === 'playing' || status === 'ready' || status === 'won' ? (
+              dailyDate ? (
+                <span>
+                  {new Date(dailyDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} ({difficulty})
+                </span>
+              ) : (
+                difficulty
+              )
+            ) : (
+              'Select a game'
+            )}
           </div>
 
           {settings.showClock && (
