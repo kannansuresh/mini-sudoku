@@ -41,14 +41,33 @@ describe('Sudoku Logic', () => {
     expect(isFull).toBe(true);
   });
 
-  it('should generate a puzzle', () => {
+  it('should generate an Easy puzzle within clue range', () => {
     const puzzle = generateSudoku('Easy');
-    let emptyCount = 0;
-    for(let r=0; r<6; r++) {
-      for(let c=0; c<6; c++) {
-        if(puzzle[r][c] === null) emptyCount++;
-      }
-    }
-    expect(emptyCount).toBe(12);
+    let clueCount = 0;
+    for(let r=0; r<6; r++) for(let c=0; c<6; c++) if(puzzle[r][c] !== null) clueCount++;
+
+    // Easy: 17-20 clues
+    expect(clueCount).toBeGreaterThanOrEqual(17);
+    expect(clueCount).toBeLessThanOrEqual(20);
+  });
+
+  it('should generate a Medium puzzle within clue range', () => {
+    const puzzle = generateSudoku('Medium');
+    let clueCount = 0;
+    for(let r=0; r<6; r++) for(let c=0; c<6; c++) if(puzzle[r][c] !== null) clueCount++;
+
+    // Medium: 12-16 clues
+    expect(clueCount).toBeGreaterThanOrEqual(12);
+    expect(clueCount).toBeLessThanOrEqual(16);
+  });
+
+  it('should generate a Hard puzzle within clue range', () => {
+    const puzzle = generateSudoku('Hard');
+    let clueCount = 0;
+    for(let r=0; r<6; r++) for(let c=0; c<6; c++) if(puzzle[r][c] !== null) clueCount++;
+
+    // Hard: 8-11 clues
+    expect(clueCount).toBeGreaterThanOrEqual(8);
+    expect(clueCount).toBeLessThanOrEqual(11);
   });
 });

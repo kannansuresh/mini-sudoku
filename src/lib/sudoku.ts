@@ -95,19 +95,127 @@ export const setSeed = (seed: number) => {
 const getRandom = () => rng.next();
 
 export const generateSudoku = (difficulty: Difficulty): Grid => {
-  // 1. Create a full valid grid
-  const grid = createEmptyGrid();
+  let puzzle: Grid = createEmptyGrid();
+  let isValidPuzzle = false;
+  let attempts = 0;
+  const MAX_ATTEMPTS = 200; // Safety break
 
-  // Randomize the first row to ensure randomness
+  while (!isValidPuzzle && attempts < MAX_ATTEMPTS) {
+    attempts++;
+
+    // 1. Create a full valid grid
+    const grid = createEmptyGrid();
+    // Randomize the first row
+    const firstRow = [1, 2, 3, 4, 5, 6].sort(() => getRandom() - 0.5);
+    for(let c=0; c<6; c++) grid[0][c] = firstRow[c] as CellValue;
+    solveSudoku(grid);
+
+    // 2. Remove numbers based on difficulty target
+    let targetClues = 0;
+    switch (difficulty) {
+      case 'Easy': targetClues = Math.floor(17 + getRandom() * 4); break; // 17-20
+      case 'Medium': targetClues = Math.floor(12 + getRandom() * 5); break; // 12-16
+      case 'Hard': targetClues = Math.floor(8 + getRandom() * 4); break; // 8-11
+    }
+
+    // Create puzzle by removing cells
+    const tempPuzzle = grid.map(row => [...row]);
+    const cells = [];
+    for(let r=0; r<ROWS; r++) for(let c=0; c<COLS; c++) cells.push({r, c});
+
+    // Shuffle cells to remove randomly
+    cells.sort(() => getRandom() - 0.5);
+
+    let filledCount = 36;
+    for (const cell of cells) {
+      if (filledCount <= targetClues) break;
+
+      const val = tempPuzzle[cell.r][cell.c];
+      tempPuzzle[cell.r][cell.c] = null;
+
+      // Check Uniqueness immediately? Or batch remove?
+      // Batch remove is faster but might break uniqueness often.
+      // Better to check uniqueness.
+      if (countSolutions(tempPuzzle) !== 1) {
+        tempPuzzle[cell.r][cell.c] = val; // Put it back
+      } else {
+        filledCount--;
+      }
+    }
+
+    // 3. Verify Difficulty Rules
+    const analysis = solveByStrategy(tempPuzzle);
+
+    if (difficulty === 'Easy') {
+      // Must be solvable by FullHouse + NakedSingle
+      // Must NOT require HiddenSingle
+      // Flow Rule: At least one unit has >= 4 filled cells (checked by FullHouse strategy essentially, but let's check explicitly)
+
+      // Check Flow Rule:
+      let hasFlow = false;
+      // Check rows/cols/boxes for >= 4 filled
+      for(let r=0; r<ROWS; r++) if(tempPuzzle[r].filter(x=>x!==null).length >= 4) hasFlow = true;
+      for(let c=0; c<COLS; c++) {
+        let count=0; for(let r=0; r<ROWS; r++) if(tempPuzzle[r][c]!==null) count++;
+        if(count >= 4) hasFlow = true;
+      }
+      // (Regions check omitted for brevity, usually covered by row/col in 6x6)
+
+      if (analysis.solved &&
+          !analysis.strategiesUsed.has('HiddenSingle') &&
+          !analysis.strategiesUsed.has('Pairs') &&
+          hasFlow) {
+        puzzle = tempPuzzle;
+        isValidPuzzle = true;
+      }
+    }
+    else if (difficulty === 'Medium') {
+      // Must require HiddenSingle
+      // Stuck if only NakedSingle used (implied if HiddenSingle is in strategiesUsed and it was needed)
+
+      if (analysis.solved && analysis.strategiesUsed.has('HiddenSingle')) {
+        puzzle = tempPuzzle;
+        isValidPuzzle = true;
+      }
+    }
+    else if (difficulty === 'Hard') {
+      // Must require Pairs OR Barren Start
+      // Barren Start: No row/col has > 2 filled cells
+
+      let isBarren = true;
+      for(let r=0; r<ROWS; r++) if(tempPuzzle[r].filter(x=>x!==null).length > 2) isBarren = false;
+      for(let c=0; c<COLS; c++) {
+        let count=0; for(let r=0; r<ROWS; r++) if(tempPuzzle[r][c]!==null) count++;
+        if(count > 2) isBarren = false;
+      }
+
+      // If it's NOT solved by basic strategies (meaning it needs Pairs or harder)
+      // OR if it's solved but has Barren Start
+      if ((!analysis.solved && countSolutions(tempPuzzle) === 1) || (isBarren && countSolutions(tempPuzzle) === 1)) {
+        puzzle = tempPuzzle;
+        isValidPuzzle = true;
+      }
+    }
+  }
+
+  // Fallback if we couldn't generate a perfect one in attempts
+  if (!isValidPuzzle) {
+    console.warn("Could not generate puzzle satisfying strict criteria, returning best effort.");
+    // Just return the last generated one if valid, or generate a simple one
+    return generateSudokuSimple(difficulty);
+  }
+
+  return puzzle;
+};
+
+// Fallback generator (original logic)
+const generateSudokuSimple = (difficulty: Difficulty): Grid => {
+  const grid = createEmptyGrid();
   const firstRow = [1, 2, 3, 4, 5, 6].sort(() => getRandom() - 0.5);
   for(let c=0; c<6; c++) grid[0][c] = firstRow[c] as CellValue;
-
   solveSudoku(grid);
 
-  // 2. Remove numbers based on difficulty
-  let attempts = 0;
-  let removeCount = 0;
-
+  let removeCount = 12;
   switch (difficulty) {
     case 'Easy': removeCount = 12; break;
     case 'Medium': removeCount = 18; break;
@@ -115,17 +223,15 @@ export const generateSudoku = (difficulty: Difficulty): Grid => {
   }
 
   const puzzle = grid.map(row => [...row]);
-
+  let attempts = 0;
   while (attempts < removeCount) {
     const row = Math.floor(getRandom() * ROWS);
     const col = Math.floor(getRandom() * COLS);
-
     if (puzzle[row][col] !== null) {
       puzzle[row][col] = null;
       attempts++;
     }
   }
-
   return puzzle;
 };
 
@@ -158,6 +264,210 @@ export const getDailySeed = (): number => {
   const date = istDate.getDate();
 
   return year * 10000 + month * 100 + date;
+};
+
+// --- Solver & Generation Helpers ---
+
+const getCandidates = (grid: Grid, r: number, c: number): number[] => {
+  const candidates: number[] = [];
+  for (let num = 1; num <= 6; num++) {
+    if (isValid(grid, r, c, num as CellValue)) {
+      candidates.push(num);
+    }
+  }
+  return candidates;
+};
+
+const countSolutions = (grid: Grid, limit: number = 2): number => {
+  let count = 0;
+  const solve = (g: Grid): boolean => {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (g[r][c] === null) {
+          for (let num = 1; num <= 6; num++) {
+            if (isValid(g, r, c, num as CellValue)) {
+              g[r][c] = num as CellValue;
+              if (solve(g)) {
+                if (count >= limit) return true;
+              }
+              g[r][c] = null;
+            }
+          }
+          return false;
+        }
+      }
+    }
+    count++;
+    return count >= limit; // Stop if we reached the limit
+  };
+
+  // Clone grid to avoid mutation
+  const gridCopy = grid.map(row => [...row]);
+  solve(gridCopy);
+  return count;
+};
+
+type Strategy = 'FullHouse' | 'NakedSingle' | 'HiddenSingle' | 'Pairs' | 'None';
+
+const solveByStrategy = (grid: Grid): { solved: boolean, maxStrategy: Strategy, strategiesUsed: Set<Strategy> } => {
+  const g = grid.map(row => [...row]);
+  const strategiesUsed = new Set<Strategy>();
+  let maxStrategy: Strategy = 'None';
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    // 1. Full House (Priority 1)
+    // Unit with 5 filled cells
+    let foundFullHouse = false;
+
+    // Check Rows
+    for (let r = 0; r < ROWS; r++) {
+      let emptyCount = 0;
+      let emptyCol = -1;
+      for (let c = 0; c < COLS; c++) {
+        if (g[r][c] === null) { emptyCount++; emptyCol = c; }
+      }
+      if (emptyCount === 1) {
+        const cands = getCandidates(g, r, emptyCol);
+        if (cands.length === 1) {
+          g[r][emptyCol] = cands[0] as CellValue;
+          strategiesUsed.add('FullHouse');
+          if (maxStrategy === 'None') maxStrategy = 'FullHouse';
+          foundFullHouse = true;
+          changed = true;
+        }
+      }
+    }
+    if (foundFullHouse) continue;
+
+    // Check Cols
+    for (let c = 0; c < COLS; c++) {
+      let emptyCount = 0;
+      let emptyRow = -1;
+      for (let r = 0; r < ROWS; r++) {
+        if (g[r][c] === null) { emptyCount++; emptyRow = r; }
+      }
+      if (emptyCount === 1) {
+        const cands = getCandidates(g, emptyRow, c);
+        if (cands.length === 1) {
+          g[emptyRow][c] = cands[0] as CellValue;
+          strategiesUsed.add('FullHouse');
+          if (maxStrategy === 'None') maxStrategy = 'FullHouse';
+          foundFullHouse = true;
+          changed = true;
+        }
+      }
+    }
+    if (foundFullHouse) continue;
+
+    // Check Regions
+    for (let br = 0; br < ROWS; br += BOX_HEIGHT) {
+      for (let bc = 0; bc < COLS; bc += BOX_WIDTH) {
+        let emptyCount = 0;
+        let lastEmpty = { r: -1, c: -1 };
+        for (let r = 0; r < BOX_HEIGHT; r++) {
+          for (let c = 0; c < BOX_WIDTH; c++) {
+            if (g[br + r][bc + c] === null) {
+              emptyCount++;
+              lastEmpty = { r: br + r, c: bc + c };
+            }
+          }
+        }
+        if (emptyCount === 1) {
+          const cands = getCandidates(g, lastEmpty.r, lastEmpty.c);
+          if (cands.length === 1) {
+            g[lastEmpty.r][lastEmpty.c] = cands[0] as CellValue;
+            strategiesUsed.add('FullHouse');
+            if (maxStrategy === 'None') maxStrategy = 'FullHouse';
+            foundFullHouse = true;
+            changed = true;
+          }
+        }
+      }
+    }
+    if (foundFullHouse) continue;
+
+
+    // 2. Naked Single (Priority 2)
+    // Cell with only 1 candidate
+    let foundNakedSingle = false;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (g[r][c] === null) {
+          const cands = getCandidates(g, r, c);
+          if (cands.length === 1) {
+            g[r][c] = cands[0] as CellValue;
+            strategiesUsed.add('NakedSingle');
+            if (maxStrategy === 'None' || maxStrategy === 'FullHouse') maxStrategy = 'NakedSingle';
+            foundNakedSingle = true;
+            changed = true;
+            break; // Restart loop to prioritize easier moves if any opened up
+          }
+        }
+      }
+      if (foundNakedSingle) break;
+    }
+    if (foundNakedSingle) continue;
+
+
+    // 3. Hidden Single (Priority 3)
+    // Number can only go in one spot in a unit
+    let foundHiddenSingle = false;
+    // Check Regions for Hidden Single
+    for (let br = 0; br < ROWS; br += BOX_HEIGHT) {
+      for (let bc = 0; bc < COLS; bc += BOX_WIDTH) {
+        for (let num = 1; num <= 6; num++) {
+          // Check if num is already in region
+          let present = false;
+          for(let r=0; r<BOX_HEIGHT; r++) for(let c=0; c<BOX_WIDTH; c++) if(g[br+r][bc+c] === num) present = true;
+          if (present) continue;
+
+          // Find possible spots
+          let spots: {r:number, c:number}[] = [];
+          for(let r=0; r<BOX_HEIGHT; r++) {
+            for(let c=0; c<BOX_WIDTH; c++) {
+              if (g[br+r][bc+c] === null && isValid(g, br+r, bc+c, num as CellValue)) {
+                spots.push({r: br+r, c: bc+c});
+              }
+            }
+          }
+
+          if (spots.length === 1) {
+            g[spots[0].r][spots[0].c] = num as CellValue;
+            strategiesUsed.add('HiddenSingle');
+            maxStrategy = 'HiddenSingle';
+            foundHiddenSingle = true;
+            changed = true;
+            break;
+          }
+        }
+        if (foundHiddenSingle) break;
+      }
+      if (foundHiddenSingle) break;
+    }
+    if (foundHiddenSingle) continue;
+
+    // 4. Pairs (Priority 4 - Hard)
+    // Simple Naked Pairs implementation for 6x6
+    // If two cells in a unit have the exact same 2 candidates, those candidates can be removed from other cells in the unit.
+    // This is a bit more complex to implement fully.
+    // For now, we'll assume if we are stuck here, it requires "Hard" logic.
+    // But we need to actually SOLVE it to verify it's solvable.
+    // If we are stuck, we return.
+
+    // NOTE: Implementing full Pairs logic is complex.
+    // For the purpose of "Grading", if we are stuck here but the puzzle IS solvable (checked by backtracking),
+    // then it effectively requires "Hard" logic (or at least logic beyond Hidden Single).
+    // So we can stop here.
+  }
+
+  // Check if solved
+  let isSolved = true;
+  for(let r=0; r<ROWS; r++) for(let c=0; c<COLS; c++) if(g[r][c] === null) isSolved = false;
+
+  return { solved: isSolved, maxStrategy, strategiesUsed };
 };
 
 
