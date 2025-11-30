@@ -8,10 +8,14 @@ import { StartGameOverlay } from "./StartGameOverlay"; // Assuming StartGameOver
 export function SudokuGrid() {
   const { grid, initialGrid, settings, status } = useGameStore();
 
+  const isGridFull = useMemo(() => {
+    return grid.every(row => row.every(cell => cell !== null));
+  }, [grid]);
+
   const conflictingCells = useMemo(() => {
-    if (!settings.autocheck) return new Set<string>();
+    if (settings.autocheck === 'off' && !isGridFull) return new Set<string>();
     return getConflictingCells(grid);
-  }, [grid, settings.autocheck]);
+  }, [grid, settings.autocheck, isGridFull]);
 
   if (!grid || grid.length === 0) return null;
 
@@ -36,6 +40,7 @@ export function SudokuGrid() {
                   value={value}
                   isInitial={initialGrid[rowIndex][colIndex] !== null}
                   isConflict={conflictingCells.has(`${rowIndex}-${colIndex}`)}
+                  isGridFull={isGridFull}
                 />
               </div>
             ))}

@@ -24,6 +24,7 @@ export function SettingsModal() {
   }, [isOpen, settings]);
 
   const handleToggle = (key: keyof typeof settings) => {
+    if (key === 'autocheck') return; // Handled separately
     setLocalSettings(prev => ({
       ...prev,
       [key]: !prev[key]
@@ -65,17 +66,32 @@ export function SettingsModal() {
 
         <div className="space-y-4">
           <SettingToggle
-            label="Show Clock"
+            label="Show Timer"
             description="Show the elapsed time"
             checked={localSettings.showClock}
             onChange={() => handleToggle('showClock')}
           />
-          <SettingToggle
-            label="Autocheck"
-            description="Highlight errors automatically"
-            checked={localSettings.autocheck}
-            onChange={() => handleToggle('autocheck')}
-          />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium">Autocheck</p>
+              <p className="text-xs text-neutral-500">Highlight errors automatically</p>
+            </div>
+            <div className="flex rounded-md border border-neutral-200 p-1 dark:border-neutral-800">
+              {(['off', 'conflicts', 'mistakes'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setLocalSettings(prev => ({ ...prev, autocheck: mode }))}
+                  className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                    localSettings.autocheck === mode
+                      ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                      : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100'
+                  }`}
+                >
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
           <SettingToggle
             label="Highlight Sections"
             description="Highlight row, column, and region"
@@ -83,7 +99,7 @@ export function SettingsModal() {
             onChange={() => handleToggle('highlightSections')}
           />
           <SettingToggle
-            label="Count Remaining"
+            label="Remaining Count"
             description="Show remaining count for each number"
             checked={localSettings.countRemaining}
             onChange={() => handleToggle('countRemaining')}

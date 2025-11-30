@@ -4,7 +4,7 @@ import type { Grid, CellValue, Difficulty } from '@/lib/sudoku';
 
 interface GameSettings {
   showClock: boolean;
-  autocheck: boolean;
+  autocheck: 'off' | 'mistakes' | 'conflicts';
   highlightSections: boolean;
   countRemaining: boolean;
   showAvailablePlacements: boolean;
@@ -63,9 +63,9 @@ interface GameState {
 
 const DEFAULT_SETTINGS: GameSettings = {
   showClock: true,
-  autocheck: false,
+  autocheck: 'off',
   highlightSections: true,
-  countRemaining: true,
+  countRemaining: false,
   showAvailablePlacements: false,
   hideFinishedNumber: false,
   notesMode: false,

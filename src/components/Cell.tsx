@@ -8,9 +8,10 @@ interface CellProps {
   value: CellValue;
   isInitial: boolean;
   isConflict: boolean;
+  isGridFull: boolean;
 }
 
-export function Cell({ row, col, value, isInitial, isConflict }: CellProps) {
+export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: CellProps) {
   const {
     selectedCell,
     selectCell,
@@ -35,13 +36,15 @@ export function Cell({ row, col, value, isInitial, isConflict }: CellProps) {
 
   const isSameValue = selectedCell && grid[selectedCell.row][selectedCell.col] !== null && grid[selectedCell.row][selectedCell.col] === value;
 
+  // Determine effective autocheck mode
+  // If grid is full and autocheck is off, treat it as 'mistakes' to show errors
+  const effectiveAutocheck = (settings.autocheck === 'off' && isGridFull) ? 'mistakes' : settings.autocheck;
+
   // Check against solution for "wrong value" (even if unique)
-  const isSolutionError = settings.autocheck && value !== null && value !== solution[row][col];
+  const isSolutionError = effectiveAutocheck === 'mistakes' && value !== null && value !== solution[row][col];
 
   // Combine conflict (duplicate) and solution error
-  // If it's a conflict, it's definitely an error.
-  // If it's a solution error but not a conflict (unique wrong number), we still show it.
-  const isError = isConflict || isSolutionError;
+  const isError = (effectiveAutocheck !== 'off' && isConflict) || isSolutionError;
 
   const cellNotes = notes[`${row}-${col}`] || [];
 
