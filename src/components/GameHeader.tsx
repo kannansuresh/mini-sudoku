@@ -104,21 +104,33 @@ export function GameHeader() {
       {/* Controls Row */}
       <div className="flex w-full items-center justify-center gap-2">
         <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowResetConfirm(true)}
-                disabled={status !== 'In Progress'}
-              >
-                <RotateCcw className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Reset Puzzle</p>
-            </TooltipContent>
-          </Tooltip>
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Play className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>New Game</p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+              {(['Easy', 'Medium', 'Hard'] as Difficulty[]).map((d) => (
+                <DropdownMenuItem key={d} onClick={() => handleNewGame(
+                  () => startGame(d),
+                  "Start New Game?",
+                  dailyDate
+                    ? `Are you sure you want to start a new ${d} game? Your progress will be saved up until now including elapsed time.`
+                    : `Are you sure you want to start a new ${d} game? Your current progress will be lost.`
+                )}>
+                  {d}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Popover open={isCalendarOpen} onOpenChange={(open) => {
             setIsCalendarOpen(open);
@@ -233,33 +245,21 @@ export function GameHeader() {
             </TooltipContent>
           </Tooltip>
 
-          <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Play className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>New Game</p>
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent align="end">
-              {(['Easy', 'Medium', 'Hard'] as Difficulty[]).map((d) => (
-                <DropdownMenuItem key={d} onClick={() => handleNewGame(
-                  () => startGame(d),
-                  "Start New Game?",
-                  dailyDate
-                    ? `Are you sure you want to start a new ${d} game? Your progress will be saved up until now including elapsed time.`
-                    : `Are you sure you want to start a new ${d} game? Your current progress will be lost.`
-                )}>
-                  {d}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowResetConfirm(true)}
+                disabled={status !== 'In Progress'}
+              >
+                <RotateCcw className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Reset Puzzle</p>
+            </TooltipContent>
+          </Tooltip>
 
           <SettingsModal />
           <ModeToggle />
