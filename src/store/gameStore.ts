@@ -39,6 +39,8 @@ interface GameState {
   player: Player | null;
   sessionId: number | null;
   mistakes: number;
+  initialized: boolean;
+  isInitializing: boolean;
 
   // Actions
   initializeStore: () => Promise<void>;
@@ -97,8 +99,16 @@ export const useGameStore = create<GameState>((set, get) => ({
   player: null,
   sessionId: null,
   mistakes: 0,
+  initialized: false,
+  isInitializing: false,
+
 
   initializeStore: async () => {
+    const { initialized, isInitializing } = get();
+    if (initialized || isInitializing) return;
+
+    set({ isInitializing: true });
+
     try {
       const player = await initDB();
       const dbSettings = await getSettings(player.id);
@@ -136,8 +146,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         await get().startGame(settings.defaultDifficulty);
       }
 
+      set({ initialized: true, isInitializing: false });
+
     } catch (error) {
       console.error("Failed to initialize store:", error);
+      set({ isInitializing: false });
     }
   },
 
