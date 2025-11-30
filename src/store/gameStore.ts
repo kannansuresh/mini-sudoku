@@ -34,6 +34,7 @@ interface GameState {
   startDailyGame: () => void;
   confirmStartGame: () => void;
   enterCreateMode: () => void;
+  importGrid: (scannedGrid: (number | null)[][]) => void;
   validateAndStartCustomGame: () => { success: boolean; error?: string };
   selectCell: (row: number, col: number) => void;
   showHint: () => void;
@@ -161,6 +162,24 @@ export const useGameStore = create<GameState>((set, get) => ({
       timer: 0,
       activeHint: null,
       hasMadeMoves: false,
+    });
+  },
+
+  importGrid: (scannedGrid: (number | null)[][]) => {
+    const { status } = get();
+    if (status !== 'creating') return;
+
+    const empty = createEmptyGrid();
+    // Merge scanned grid with empty grid structure (just in case)
+    const newGrid = empty.map((row, r) =>
+      row.map((_, c) => scannedGrid[r][c] as CellValue)
+    );
+
+    set({
+      grid: newGrid,
+      history: [newGrid.map(row => [...row])],
+      historyPointer: 0,
+      hasMadeMoves: true,
     });
   },
 

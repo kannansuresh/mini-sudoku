@@ -1,7 +1,8 @@
 import { useGameStore } from "@/store/gameStore";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, Pencil, X, Play } from "lucide-react";
+import { Lightbulb, Pencil, X, Play, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImageImportModal } from "./ImageImportModal";
 
 import {
   AlertDialog,
@@ -39,13 +40,24 @@ export function Controls() {
     }
   };
 
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const { importGrid } = useGameStore();
+
   if (status === 'creating') {
     return (
       <>
         <div className="flex w-full gap-2 min-h-[48px]">
           <Button
+            variant="outline"
+            className="flex-1 h-auto py-2"
+            onClick={() => setIsImportOpen(true)}
+          >
+            <ScanLine className="mr-2 h-4 w-4" />
+            <span className="font-semibold">Import</span>
+          </Button>
+          <Button
             variant="ghost"
-            className="w-full h-auto py-2 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-900/50"
+            className="flex-1 h-auto py-2 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-900/50"
             onClick={handleStartGame}
           >
             <Play className="mr-2 h-4 w-4 fill-current" />
@@ -66,6 +78,12 @@ export function Controls() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <ImageImportModal
+          isOpen={isImportOpen}
+          onClose={() => setIsImportOpen(false)}
+          onScanComplete={importGrid}
+        />
       </>
     );
   }
