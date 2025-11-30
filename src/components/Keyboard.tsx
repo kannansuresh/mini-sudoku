@@ -20,7 +20,7 @@ export function Keyboard() {
   } = useGameStore();
 
   const handleNumberClick = (num: CellValue) => {
-    if (status === 'won') return;
+    if (status === 'Completed') return;
     if (settings.notesMode || tempNotesMode) {
       toggleNote(num as number);
     } else {
@@ -52,7 +52,7 @@ export function Keyboard() {
   const renderNumberButton = (num: number) => {
     const finished = isFinished(num);
     const isInitial = selectedCell && initialGrid[selectedCell.row][selectedCell.col] !== null;
-    const disabled = (settings.hideFinishedNumber && finished) ||
+    const disabled = (settings.hideFilledNumbers && finished) ||
                      (settings.showAvailablePlacements && !isPlacementValid(num)) ||
                      isInitial;
 
@@ -67,10 +67,10 @@ export function Keyboard() {
           disabled && "opacity-20 pointer-events-none"
         )}
         onClick={() => handleNumberClick(num as CellValue)}
-        disabled={disabled || status === 'won'}
+        disabled={disabled || status === 'Completed'}
       >
         <span>{num}</span>
-        {settings.countRemaining && !finished && !settings.notesMode && !tempNotesMode && (
+        {settings.remainingCount && !finished && !settings.notesMode && !tempNotesMode && (
           <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px] font-bold text-neutral-600 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:ring-neutral-600">
             {getRemainingCount(num)}
           </span>
@@ -89,7 +89,7 @@ export function Keyboard() {
         variant="secondary"
         className="h-14 w-full sm:h-16 flex flex-col items-center justify-center gap-1"
         onClick={undo}
-        disabled={status === 'won'}
+        disabled={status === 'Completed'}
       >
         <Undo2 className="h-5 w-5" />
         <span className="text-xs">Undo</span>
@@ -103,7 +103,7 @@ export function Keyboard() {
         variant="secondary"
         className="h-14 w-full sm:h-16 flex flex-col items-center justify-center gap-1"
         onClick={clearCell}
-        disabled={status === 'won'}
+        disabled={status === 'Completed'}
       >
         <Eraser className="h-5 w-5" />
         <span className="text-xs">Erase</span>

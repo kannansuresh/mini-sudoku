@@ -29,7 +29,7 @@ export function Controls() {
   const [error, setError] = useState<string | null>(null);
 
   const handleHint = () => {
-    if (status === 'won') return;
+    if (status === 'Completed') return;
     useGameStore.getState().showHint();
   };
 
@@ -121,7 +121,7 @@ export function Controls() {
                 : "text-neutral-500 dark:text-neutral-400"
             )}
             onClick={() => setNotesMode(!settings.notesMode)}
-            disabled={status === 'won'}
+            disabled={status === 'Completed'}
           >
             <div className="relative">
               <Pencil className={cn("h-5 w-5 transition-all", isNotesActive && "stroke-2")} />
@@ -141,7 +141,7 @@ export function Controls() {
             variant="ghost"
             className="flex-1 hover:bg-transparent hover:text-neutral-900 dark:hover:text-neutral-100"
             onClick={handleHint}
-            disabled={status === 'won'}
+            disabled={status === 'Completed'}
           >
             <Lightbulb className="mr-2 h-4 w-4" />
             Hint

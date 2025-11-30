@@ -1,18 +1,22 @@
 import { create } from 'zustand';
-import { generateSudoku, solveSudoku, createEmptyGrid, setSeed, getDailyDifficulty, getDailySeed, getHint } from '@/lib/sudoku';
-import type { Grid, CellValue, Difficulty } from '@/lib/sudoku';
-
-interface GameSettings {
-  showClock: boolean;
-  autocheck: 'off' | 'mistakes' | 'conflicts';
-  highlightSections: boolean;
-  countRemaining: boolean;
-  showAvailablePlacements: boolean;
-  hideFinishedNumber: boolean;
-  notesMode: boolean;
-  skipStartOverlay: boolean;
-  defaultMode: 'daily' | 'easy' | 'medium' | 'hard';
-}
+import { generateSudoku, solveSudoku, createEmptyGrid, setSeed, getDailyDifficulty, getDailySeed, getHint, gridToString, stringToGrid } from '@/lib/sudoku';
+import type { Grid, CellValue } from '@/lib/sudoku';
+import {
+  initDB,
+  getSettings,
+  updateSettings as updateDBSettings,
+  createGameSession,
+  updateGameProgress,
+  getDailyChallengeSession,
+  GameStatus,
+  DefaultGameMode,
+  Difficulty,
+  GameType,
+  AutocheckModes,
+  type Player,
+  type Settings,
+  type GameSession
+} from '@/lib/db';
 
 interface GameState {
   grid: Grid;
@@ -21,28 +25,25 @@ interface GameState {
   notes: Record<string, number[]>; // key: "r-c", value: array of numbers
   selectedCell: { row: number; col: number } | null;
   history: Grid[];
-  historyPointer: number; // Current position in history
+  historyPointer: number;
   difficulty: Difficulty;
-  status: 'idle' | 'ready' | 'playing' | 'won' | 'creating';
+  status: GameStatus | 'creating'; // 'creating' is UI state, not DB state
   timer: number;
-  settings: GameSettings;
+  settings: Settings;
   activeHint: { row: number; col: number; value: number; reason: string } | null;
   tempNotesMode: boolean;
   hasMadeMoves: boolean;
   dailyDate: Date | null;
-  dailyProgress: Record<string, {
-    grid: Grid;
-    history: Grid[];
-    historyPointer: number;
-    timer: number;
-    status: 'playing' | 'won';
-    notes: Record<string, number[]>;
-  }>;
+
+  // New DB related state
+  player: Player | null;
+  sessionId: number | null;
+  mistakes: number;
 
   // Actions
-  initializeGame: () => void;
-  startGame: (difficulty: Difficulty, customGrid?: Grid) => void;
-  startDailyGame: (date?: Date) => void;
+  initializeStore: () => Promise<void>;
+  startGame: (difficulty: Difficulty, customGrid?: Grid) => Promise<void>;
+  startDailyGame: (date?: Date) => Promise<void>;
   confirmStartGame: () => void;
   enterCreateMode: () => void;
   importGrid: (scannedGrid: (number | null)[][]) => void;
@@ -55,533 +56,609 @@ interface GameState {
   undo: () => void;
   resetGame: () => void;
   clearCell: () => void;
-  toggleSettings: (setting: keyof GameSettings) => void;
-  updateSettings: (settings: Partial<GameSettings>) => void;
+  toggleSettings: (setting: keyof Settings) => void;
+  updateSettings: (settings: Partial<Settings>) => void;
   setNotesMode: (enabled: boolean) => void;
   setTempNotesMode: (enabled: boolean) => void;
   tickTimer: () => void;
   checkWin: () => void;
 }
 
-const DEFAULT_SETTINGS: GameSettings = {
-  showClock: true,
-  autocheck: 'off',
+const DEFAULT_SETTINGS: Omit<Settings, 'id' | 'player'> = {
+  showTimer: true,
+  defaultMode: DefaultGameMode.Daily,
+  defaultDifficulty: Difficulty.Medium,
+  autoCheck: AutocheckModes.Conflicts,
   highlightSections: true,
-  countRemaining: false,
+  remainingCount: false,
   showAvailablePlacements: false,
-  hideFinishedNumber: false,
+  hideFilledNumbers: false,
+  skipStartBanner: false,
   notesMode: false,
-  skipStartOverlay: false,
-  defaultMode: 'daily',
+  theme: 'system'
 };
 
-import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
-import { get, set, del } from 'idb-keyval';
+export const useGameStore = create<GameState>((set, get) => ({
+  grid: createEmptyGrid(),
+  solution: createEmptyGrid(),
+  initialGrid: createEmptyGrid(),
+  notes: {},
+  selectedCell: null,
+  history: [],
+  historyPointer: -1,
+  difficulty: Difficulty.Easy,
+  status: GameStatus.NotStarted,
+  timer: 0,
+  settings: { ...DEFAULT_SETTINGS, id: 0, player: 0 } as Settings, // Placeholder
+  activeHint: null,
+  tempNotesMode: false,
+  hasMadeMoves: false,
+  dailyDate: null,
+  player: null,
+  sessionId: null,
+  mistakes: 0,
 
-const storage: StateStorage = {
-  getItem: async (name: string): Promise<string | null> => {
-    return (await get(name)) || null;
-  },
-  setItem: async (name: string, value: string): Promise<void> => {
-    await set(name, value);
-  },
-  removeItem: async (name: string): Promise<void> => {
-    await del(name);
-  },
-};
+  initializeStore: async () => {
+    try {
+      const player = await initDB();
+      const dbSettings = await getSettings(player.id);
 
-export const useGameStore = create<GameState>()(
-  persist(
-    (set, get) => ({
-      grid: createEmptyGrid(),
-      solution: createEmptyGrid(),
-      initialGrid: createEmptyGrid(),
+      set({ player });
+
+      if (dbSettings) {
+        set({ settings: dbSettings });
+      } else {
+        // Should have been created by initDB, but fallback just in case
+        set({ settings: { ...DEFAULT_SETTINGS, player: player.id } as Settings });
+      }
+
+      // Check for active session logic could go here if we wanted to resume last played game automatically
+      // For now, we follow the default mode logic
+      const { settings } = get();
+
+      // We don't auto-start games here anymore, we just set up the UI state
+      // The UI (App.tsx) calls initializeGame which we can map to this or separate logic
+      // Let's implement the default mode logic here
+
+      const today = new Date();
+
+      if (settings.defaultMode === DefaultGameMode.Daily) {
+        // Check if today's daily is done
+        const dailySession = await getDailyChallengeSession(player.id, today);
+        if (dailySession && dailySession.status === GameStatus.Completed) {
+           // Fallback to Medium
+           await get().startGame(Difficulty.Medium);
+        } else {
+           await get().startDailyGame(today);
+        }
+      } else {
+        // Start Standard game
+        await get().startGame(settings.defaultDifficulty);
+      }
+
+    } catch (error) {
+      console.error("Failed to initialize store:", error);
+    }
+  },
+
+  startGame: async (difficulty, customGrid) => {
+    const { player, settings } = get();
+    if (!player) return;
+
+    setSeed(Date.now());
+
+    let puzzle: Grid;
+    let solution: Grid;
+
+    if (customGrid) {
+      puzzle = customGrid.map(row => [...row]);
+      solution = customGrid.map(row => [...row]);
+      solveSudoku(solution);
+    } else {
+      puzzle = generateSudoku(difficulty);
+      solution = puzzle.map(row => [...row]);
+      solveSudoku(solution);
+    }
+
+    const initial = puzzle.map(row => [...row]);
+    const initialStateStr = gridToString(initial);
+
+    // Create new session
+    const session: GameSession = {
+      player: player.id,
+      type: customGrid ? GameType.Custom : GameType.Standard,
+      status: settings.skipStartBanner ? GameStatus.InProgress : GameStatus.NotStarted, // 'ready' mapped to NotStarted/InProgress logic
+      difficulty,
+      elapsedTime: 0,
+      initialState: initialStateStr,
+      currentProgress: initialStateStr,
+      notes: JSON.stringify({}),
+      mistakes: 0,
+      score: 0,
+      startedAt: new Date(),
+    };
+
+    const sessionId = await createGameSession(session);
+
+    set({
+      grid: puzzle,
+      solution: solution,
+      initialGrid: initial,
       notes: {},
       selectedCell: null,
-      history: [],
-      historyPointer: -1,
-      difficulty: 'Easy',
-      status: 'idle',
+      history: [puzzle.map(row => [...row])],
+      historyPointer: 0,
+      difficulty,
+      status: settings.skipStartBanner ? GameStatus.InProgress : GameStatus.NotStarted,
       timer: 0,
-      settings: DEFAULT_SETTINGS,
-      activeHint: null,
-      tempNotesMode: false,
       hasMadeMoves: false,
       dailyDate: null,
-      dailyProgress: {},
+      sessionId,
+      mistakes: 0
+    });
+  },
 
+  startDailyGame: async (date?: Date) => {
+    const { player } = get();
+    if (!player) return;
 
+    const targetDate = date || new Date();
+    const seed = getDailySeed(targetDate);
+    const difficulty = getDailyDifficulty(targetDate);
+    setSeed(seed);
 
-      initializeGame: () => {
-        const { settings, dailyProgress, status, dailyDate, difficulty } = get();
-        const today = new Date();
-        const dateKey = today.toISOString().split('T')[0];
+    const puzzle = generateSudoku(difficulty);
+    const solution = puzzle.map(row => [...row]);
+    solveSudoku(solution);
+    const initial = puzzle.map(row => [...row]);
 
-        if (settings.defaultMode === 'daily') {
-          const isTodayCompleted = dailyProgress[dateKey]?.status === 'won';
+    // Check for existing session
+    const existingSession = await getDailyChallengeSession(player.id, targetDate);
 
-          if (isTodayCompleted) {
-            // If today is completed, fallback to Medium
-            const isMediumActive = difficulty === 'Medium' && !dailyDate && status !== 'won' && status !== 'idle';
-            if (!isMediumActive) {
-              get().startGame('Medium');
-            }
-          } else {
-            // Start/Resume Daily
-            const isTodayDailyActive = dailyDate && dailyDate.toISOString().split('T')[0] === dateKey && status !== 'idle';
-            if (!isTodayDailyActive) {
-              get().startDailyGame(today);
-            }
-          }
-        } else {
-          // Easy / Medium / Hard
-          const targetDiff = (settings.defaultMode.charAt(0).toUpperCase() + settings.defaultMode.slice(1)) as Difficulty;
-          const isTargetActive = difficulty === targetDiff && !dailyDate && status !== 'won' && status !== 'idle';
+    if (existingSession) {
+      set({
+        grid: stringToGrid(existingSession.currentProgress),
+        solution: solution,
+        initialGrid: initial,
+        notes: JSON.parse(existingSession.notes),
+        selectedCell: null,
+        history: [stringToGrid(existingSession.currentProgress)], // History not fully persisted in schema, just current state
+        historyPointer: 0,
+        difficulty,
+        status: existingSession.status === GameStatus.Completed ? GameStatus.Completed : GameStatus.NotStarted, // Always show banner for daily unless completed
+        timer: existingSession.elapsedTime,
+        hasMadeMoves: existingSession.status !== GameStatus.NotStarted,
+        dailyDate: targetDate,
+        sessionId: existingSession.id!,
+        mistakes: existingSession.mistakes
+      });
+    } else {
+      const initialStateStr = gridToString(initial);
+      const session: GameSession = {
+        player: player.id,
+        type: GameType.Daily,
+        status: GameStatus.NotStarted,
+        difficulty,
+        elapsedTime: 0,
+        initialState: initialStateStr,
+        currentProgress: initialStateStr,
+        notes: JSON.stringify({}),
+        mistakes: 0,
+        score: 0,
+        targetDate: targetDate,
+        startedAt: new Date(),
+      };
 
-          if (!isTargetActive) {
-            get().startGame(targetDiff);
-          }
-        }
-      },
+      const sessionId = await createGameSession(session);
 
-      startGame: (difficulty, customGrid) => {
-        // Reset seed to random for normal games
-        setSeed(Date.now());
+      set({
+        grid: puzzle,
+        solution: solution,
+        initialGrid: initial,
+        notes: {},
+        selectedCell: null,
+        history: [puzzle.map(row => [...row])],
+        historyPointer: 0,
+        difficulty,
+        status: GameStatus.NotStarted,
+        timer: 0,
+        hasMadeMoves: false,
+        dailyDate: targetDate,
+        sessionId,
+        mistakes: 0
+      });
+    }
+  },
 
-        let puzzle: Grid;
-        let solution: Grid;
+  confirmStartGame: () => {
+    set({ status: GameStatus.InProgress });
+    const { sessionId, grid, notes, timer, mistakes } = get();
 
-        if (customGrid) {
-          puzzle = customGrid.map(row => [...row]);
-          solution = customGrid.map(row => [...row]);
-          solveSudoku(solution);
-        } else {
-          puzzle = generateSudoku(difficulty);
-          solution = puzzle.map(row => [...row]);
-          solveSudoku(solution);
-        }
+    // Save status change
+    if (sessionId) {
+      updateGameProgress(sessionId, {
+        status: GameStatus.InProgress,
+        currentProgress: gridToString(grid),
+        notes: JSON.stringify(notes),
+        elapsedTime: timer,
+        mistakes
+      });
+    }
+  },
 
-        // Deep copy for initial state
-        const initial = puzzle.map(row => [...row]);
+  enterCreateMode: () => {
+    const empty = createEmptyGrid();
+    set({
+      grid: empty,
+      solution: empty,
+      initialGrid: empty,
+      notes: {},
+      selectedCell: null,
+      history: [empty.map(row => [...row])],
+      historyPointer: 0,
+      status: 'creating',
+      timer: 0,
+      activeHint: null,
+      hasMadeMoves: false,
+      dailyDate: null,
+      sessionId: null,
+      mistakes: 0
+    });
+  },
 
-        const { settings } = get();
+  importGrid: (scannedGrid: (number | null)[][]) => {
+    const { status } = get();
+    if (status !== 'creating') return;
 
-        set({
-          grid: puzzle,
-          solution: solution,
-          initialGrid: initial,
-          notes: {},
-          selectedCell: null,
-          history: [puzzle.map(row => [...row])],
-          historyPointer: 0,
-          difficulty,
-          status: settings.skipStartOverlay ? 'playing' : 'ready',
-          timer: 0,
-          hasMadeMoves: false,
-          dailyDate: null,
+    const empty = createEmptyGrid();
+    const newGrid = empty.map((row, r) =>
+      row.map((_, c) => scannedGrid[r][c] as CellValue)
+    );
+
+    set({
+      grid: newGrid,
+      history: [newGrid.map(row => [...row])],
+      historyPointer: 0,
+      hasMadeMoves: true,
+    });
+  },
+
+  validateAndStartCustomGame: () => {
+    const { grid, player, settings } = get();
+    if (!player) return { success: false, error: "Player not initialized" };
+
+    const tempGrid = grid.map(row => [...row]);
+    const solvable = solveSudoku(tempGrid);
+
+    if (!solvable) {
+      return { success: false, error: "This puzzle is unsolvable or violates Sudoku rules!" };
+    }
+
+    const initial = grid.map(row => [...row]);
+    const solution = tempGrid;
+
+    // Create session for custom game
+    // We need to do this async, but this function is sync in interface (or was).
+    // We can fire and forget or make it async. Let's make it fire and forget for now or just update state and let effect handle it?
+    // Better to just do it here.
+
+    const initialStateStr = gridToString(initial);
+    const session: GameSession = {
+      player: player.id,
+      type: GameType.Custom,
+      status: GameStatus.NotStarted,
+      difficulty: Difficulty.Medium, // Custom doesn't really have difficulty
+      elapsedTime: 0,
+      initialState: initialStateStr,
+      currentProgress: initialStateStr,
+      notes: JSON.stringify({}),
+      mistakes: 0,
+      score: 0,
+      startedAt: new Date(),
+    };
+
+    createGameSession(session).then(sessionId => {
+      set({ sessionId });
+    });
+
+    set({
+      solution: solution,
+      initialGrid: initial,
+      history: [grid.map(row => [...row])],
+      historyPointer: 0,
+      status: settings.skipStartBanner ? GameStatus.InProgress : GameStatus.NotStarted,
+      timer: 0,
+      activeHint: null,
+      hasMadeMoves: false,
+      dailyDate: null,
+      mistakes: 0
+    });
+
+    return { success: true };
+  },
+
+  selectCell: (row, col) => {
+    set({ selectedCell: { row, col }, activeHint: null });
+  },
+
+  showHint: () => {
+    const { grid, solution, status } = get();
+    if (status !== GameStatus.InProgress) return;
+
+    const hint = getHint(grid, solution);
+    if (hint) {
+      set({ activeHint: hint, selectedCell: { row: hint.row, col: hint.col } });
+    }
+  },
+
+  clearHint: () => {
+    set({ activeHint: null });
+  },
+
+  setCellValue: (value) => {
+    const { grid, selectedCell, initialGrid, history, historyPointer, status, solution, sessionId, mistakes, timer, notes } = get();
+    if (!selectedCell) return;
+    if (status !== GameStatus.InProgress && status !== 'creating') return;
+
+    const { row, col } = selectedCell;
+
+    set({ activeHint: null });
+
+    if (initialGrid[row][col] !== null) return;
+    if (grid[row][col] === value) return;
+
+    // Check for mistake
+    let newMistakes = mistakes;
+    if (status === GameStatus.InProgress && value !== solution[row][col]) {
+      newMistakes++;
+    }
+
+    const newGrid = grid.map(r => [...r]);
+    newGrid[row][col] = value;
+
+    const newHistory = history.slice(0, historyPointer + 1);
+    newHistory.push(newGrid.map(r => [...r]));
+
+    const newNotes = { ...notes };
+    delete newNotes[`${row}-${col}`];
+
+    set({
+      grid: newGrid,
+      history: newHistory,
+      historyPointer: newHistory.length - 1,
+      notes: newNotes,
+      hasMadeMoves: true,
+      mistakes: newMistakes
+    });
+
+    // Save progress
+    if (sessionId && status === GameStatus.InProgress) {
+      updateGameProgress(sessionId, {
+        currentProgress: gridToString(newGrid),
+        notes: JSON.stringify(newNotes),
+        mistakes: newMistakes,
+        elapsedTime: timer,
+        status: GameStatus.InProgress
+      });
+    }
+
+    if (status === GameStatus.InProgress) {
+      get().checkWin();
+    }
+  },
+
+  toggleNote: (value) => {
+    const { selectedCell, initialGrid, notes, status, sessionId, timer } = get();
+    if (!selectedCell) return;
+    if (status !== GameStatus.InProgress && status !== 'creating') return;
+
+    set({ activeHint: null });
+
+    const { row, col } = selectedCell;
+
+    if (initialGrid[row][col] !== null) return;
+
+    const key = `${row}-${col}`;
+    const currentNotes = notes[key] || [];
+    let newNotesList;
+
+    if (currentNotes.includes(value)) {
+      newNotesList = currentNotes.filter(n => n !== value);
+    } else {
+      newNotesList = [...currentNotes, value].sort();
+    }
+
+    const newNotes = { ...notes };
+    if (newNotesList.length === 0) {
+      delete newNotes[key];
+    } else {
+      newNotes[key] = newNotesList;
+    }
+
+    set({ notes: newNotes, hasMadeMoves: true });
+
+    // Save progress
+    if (sessionId && status === GameStatus.InProgress) {
+      updateGameProgress(sessionId, {
+        notes: JSON.stringify(newNotes),
+        elapsedTime: timer
+      });
+    }
+  },
+
+  undo: () => {
+    const { history, historyPointer, sessionId, timer } = get();
+    if (historyPointer > 0) {
+      const newPointer = historyPointer - 1;
+      const newGrid = history[newPointer].map(r => [...r]);
+      set({
+        grid: newGrid,
+        historyPointer: newPointer,
+        hasMadeMoves: true,
+      });
+
+      // Save progress
+      if (sessionId) {
+        updateGameProgress(sessionId, {
+          currentProgress: gridToString(newGrid),
+          elapsedTime: timer
         });
-      },
+      }
+    }
+  },
 
-      startDailyGame: (date?: Date) => {
-        const targetDate = date || new Date();
-        const dateKey = targetDate.toISOString().split('T')[0];
-        const { dailyProgress } = get();
+  clearCell: () => {
+    const { selectedCell, initialGrid, grid, history, historyPointer, notes, sessionId, timer, status } = get();
+    if (!selectedCell) return;
+    const { row, col } = selectedCell;
 
-        const seed = getDailySeed(targetDate);
-        const difficulty = getDailyDifficulty(targetDate);
-        setSeed(seed);
+    if (initialGrid[row][col] !== null) return;
 
-        const puzzle = generateSudoku(difficulty);
-        const solution = puzzle.map(row => [...row]);
-        solveSudoku(solution);
-        const initial = puzzle.map(row => [...row]);
+    const hasValue = grid[row][col] !== null;
+    const hasNotes = notes[`${row}-${col}`] && notes[`${row}-${col}`].length > 0;
 
-        // Check if we have saved progress
-        if (dailyProgress[dateKey]) {
-          const saved = dailyProgress[dateKey];
-          set({
-            grid: saved.grid,
-            solution: solution, // Solution is deterministic based on seed
-            initialGrid: initial, // Initial is deterministic based on seed
-            notes: saved.notes,
-            selectedCell: null,
-            history: saved.history,
-            historyPointer: saved.historyPointer,
-            difficulty,
-            status: 'ready', // Always show banner for daily challenge
-            timer: saved.timer,
-            hasMadeMoves: true,
-            dailyDate: targetDate,
-          });
-        } else {
-          set({
-            grid: puzzle,
-            solution: solution,
-            initialGrid: initial,
-            notes: {},
-            selectedCell: null,
-            history: [puzzle.map(row => [...row])],
-            historyPointer: 0,
-            difficulty,
-            status: 'ready', // Always show banner for daily challenge
-            timer: 0,
-            hasMadeMoves: false,
-            dailyDate: targetDate,
-          });
+    if (!hasValue && !hasNotes) return;
+
+    const newGrid = grid.map(r => [...r]);
+    newGrid[row][col] = null;
+
+    const newHistory = history.slice(0, historyPointer + 1);
+    newHistory.push(newGrid.map(r => [...r]));
+
+    const newNotes = { ...notes };
+    if (hasNotes) {
+      delete newNotes[`${row}-${col}`];
+    }
+
+    set({
+      grid: newGrid,
+      history: newHistory,
+      historyPointer: newHistory.length - 1,
+      notes: newNotes,
+      hasMadeMoves: true,
+    });
+
+    // Save progress
+    if (sessionId && status === GameStatus.InProgress) {
+      updateGameProgress(sessionId, {
+        currentProgress: gridToString(newGrid),
+        notes: JSON.stringify(newNotes),
+        elapsedTime: timer
+      });
+    }
+  },
+
+  resetGame: () => {
+    const { initialGrid, status, sessionId, mistakes } = get();
+    if (status !== GameStatus.InProgress) return;
+
+    const emptyNotes = {};
+    const initialGridStr = gridToString(initialGrid);
+
+    set({
+      grid: initialGrid.map(row => [...row]),
+      history: [initialGrid.map(row => [...row])],
+      historyPointer: 0,
+      notes: emptyNotes,
+      selectedCell: null,
+      activeHint: null,
+      timer: 0,
+      hasMadeMoves: false,
+    });
+
+    if (sessionId) {
+      updateGameProgress(sessionId, {
+        currentProgress: initialGridStr,
+        notes: JSON.stringify(emptyNotes),
+        elapsedTime: 0,
+        mistakes: mistakes // Do we reset mistakes? Usually yes on reset.
+      });
+      // Actually, if we reset, we probably shouldn't reset mistakes if it's a strict mode, but for now let's keep mistakes?
+      // User didn't specify. Standard reset usually resets everything.
+      // Let's reset mistakes too.
+      set({ mistakes: 0 });
+      updateGameProgress(sessionId, { mistakes: 0 });
+    }
+  },
+
+  toggleSettings: (setting) => {
+    const { settings, player } = get();
+    if (!player) return;
+
+    const newSettings = { ...settings, [setting]: !settings[setting] };
+    set({ settings: newSettings });
+    updateDBSettings(player.id, { [setting]: newSettings[setting] });
+  },
+
+  updateSettings: (newSettings) => {
+    const { settings, player } = get();
+    if (!player) return;
+
+    const merged = { ...settings, ...newSettings };
+    set({ settings: merged });
+    updateDBSettings(player.id, newSettings);
+  },
+
+  setNotesMode: (enabled) => {
+    const { player } = get();
+    if (!player) return;
+
+    set(state => ({
+      settings: { ...state.settings, notesMode: enabled }
+    }));
+    updateDBSettings(player.id, { notesMode: enabled });
+  },
+
+  setTempNotesMode: (enabled) => {
+    set({ tempNotesMode: enabled });
+  },
+
+  tickTimer: () => {
+    const { status, sessionId, timer } = get();
+    if (status === GameStatus.InProgress) {
+      const newTime = timer + 1;
+      set({ timer: newTime });
+
+      // Sync timer to DB periodically or on every tick?
+      // User asked for "progress saved up until now including elapsed time" on navigation.
+      // Saving every second might be too much IO.
+      // But IndexedDB is fast. Let's do it every 5 seconds or just rely on the fact that we save on moves and navigation?
+      // The user specifically asked for "including elapsed time" when navigating away.
+      // We can save on navigation (unmount) or just save every X seconds.
+      // Let's save every 5 seconds to be safe.
+      if (newTime % 5 === 0 && sessionId) {
+        updateGameProgress(sessionId, { elapsedTime: newTime });
+      }
+    }
+  },
+
+  checkWin: () => {
+    const { grid, solution, sessionId, timer } = get();
+    let isFull = true;
+    let isCorrect = true;
+
+    for(let r=0; r<6; r++) {
+      for(let c=0; c<6; c++) {
+        if (grid[r][c] === null) {
+          isFull = false;
+          break;
         }
-      },
-
-      confirmStartGame: () => {
-        set({ status: 'playing' });
-
-        // Save initial progress for daily games so timer starts counting
-        const { dailyDate, dailyProgress, grid, history, historyPointer, timer, notes } = get();
-        if (dailyDate) {
-          const dateKey = dailyDate.toISOString().split('T')[0];
-          set({
-            dailyProgress: {
-              ...dailyProgress,
-              [dateKey]: {
-                grid,
-                history,
-                historyPointer,
-                timer,
-                status: 'playing',
-                notes,
-              }
-            }
-          });
-        }
-      },
-
-      enterCreateMode: () => {
-        const empty = createEmptyGrid();
-        set({
-          grid: empty,
-          solution: empty,
-          initialGrid: empty,
-          notes: {},
-          selectedCell: null,
-          history: [empty.map(row => [...row])],
-          historyPointer: 0,
-          status: 'creating',
-          timer: 0,
-          activeHint: null,
-          hasMadeMoves: false,
-          dailyDate: null,
-        });
-      },
-
-      importGrid: (scannedGrid: (number | null)[][]) => {
-        const { status } = get();
-        if (status !== 'creating') return;
-
-        const empty = createEmptyGrid();
-        // Merge scanned grid with empty grid structure (just in case)
-        const newGrid = empty.map((row, r) =>
-          row.map((_, c) => scannedGrid[r][c] as CellValue)
-        );
-
-        set({
-          grid: newGrid,
-          history: [newGrid.map(row => [...row])],
-          historyPointer: 0,
-          hasMadeMoves: true,
-        });
-      },
-
-      validateAndStartCustomGame: () => {
-        const { grid } = get();
-        // Validate if grid is valid so far
-        // And check if solvable
-
-        // 1. Check basic rules
-        // We can use solveSudoku to check if solvable
-        const tempGrid = grid.map(row => [...row]);
-        const solvable = solveSudoku(tempGrid);
-
-        if (!solvable) {
-          return { success: false, error: "This puzzle is unsolvable or violates Sudoku rules!" };
-        }
-
-        // If solvable, start game
-        // The current grid becomes the initial grid
-        const initial = grid.map(row => [...row]);
-        const solution = tempGrid; // solveSudoku fills it in place
-
-        set({
-          solution: solution,
-          initialGrid: initial,
-          history: [grid.map(row => [...row])],
-          historyPointer: 0,
-          status: 'ready', // Start in ready state
-          timer: 0,
-          activeHint: null,
-          hasMadeMoves: false,
-          dailyDate: null,
-        });
-
-        return { success: true };
-      },
-
-      resetGame: () => {
-        const { initialGrid, status } = get();
-        if (status !== 'playing') return;
-
-        set({
-          grid: initialGrid.map(row => [...row]),
-          history: [initialGrid.map(row => [...row])],
-          historyPointer: 0,
-          notes: {},
-          selectedCell: null,
-          activeHint: null,
-          timer: 0,
-          hasMadeMoves: false,
-        });
-      },
-
-      checkWin: () => {
-        const { grid, solution } = get();
-        // Check if grid matches solution
-        // Or just check if valid and full
-        let isFull = true;
-        let isCorrect = true;
-
-        for(let r=0; r<6; r++) {
-          for(let c=0; c<6; c++) {
-            if (grid[r][c] === null) {
-              isFull = false;
-              break;
-            }
-            if (grid[r][c] !== solution[r][c]) {
-              isCorrect = false;
-            }
-          }
-        }
-
-        if (isFull && isCorrect) {
-          set({ status: 'won' });
-
-          // Update daily progress to won
-          const { dailyDate, dailyProgress } = get();
-          if (dailyDate) {
-            const dateKey = dailyDate.toISOString().split('T')[0];
-            if (dailyProgress[dateKey]) {
-              set({
-                dailyProgress: {
-                  ...dailyProgress,
-                  [dateKey]: {
-                    ...dailyProgress[dateKey],
-                    status: 'won'
-                  }
-                }
-              });
-            }
-          }
-        }
-      },
-
-      selectCell: (row, col) => {
-        set({ selectedCell: { row, col }, activeHint: null });
-      },
-
-      showHint: () => {
-        const { grid, solution, status } = get();
-        if (status !== 'playing') return;
-
-        const hint = getHint(grid, solution);
-        if (hint) {
-          set({ activeHint: hint, selectedCell: { row: hint.row, col: hint.col } });
-        }
-      },
-
-      clearHint: () => {
-        set({ activeHint: null });
-      },
-
-      setCellValue: (value) => {
-        const { grid, selectedCell, initialGrid, history, historyPointer, status } = get();
-        if (!selectedCell) return;
-
-        // Allow in playing or creating
-        if (status !== 'playing' && status !== 'creating') return;
-
-        const { row, col } = selectedCell;
-
-        set({ activeHint: null });
-
-        if (initialGrid[row][col] !== null) return;
-        if (grid[row][col] === value) return;
-
-        const newGrid = grid.map(r => [...r]);
-        newGrid[row][col] = value;
-
-        const newHistory = history.slice(0, historyPointer + 1);
-        newHistory.push(newGrid.map(r => [...r]));
-
-        const newNotes = { ...get().notes };
-        delete newNotes[`${row}-${col}`];
-
-        set({
-          grid: newGrid,
-          history: newHistory,
-          historyPointer: newHistory.length - 1,
-          notes: newNotes,
-          hasMadeMoves: true,
-        });
-
-        // Save daily progress if applicable
-        const { dailyDate, dailyProgress, timer } = get();
-        if (dailyDate) {
-          const dateKey = dailyDate.toISOString().split('T')[0];
-          set({
-            dailyProgress: {
-              ...dailyProgress,
-              [dateKey]: {
-                grid: newGrid,
-                history: newHistory,
-                historyPointer: newHistory.length - 1,
-                timer,
-                status: 'playing',
-                notes: newNotes,
-              }
-            }
-          });
-        }
-
-        if (status === 'playing') {
-          get().checkWin();
-        }
-      },
-
-      toggleNote: (value) => {
-        const { selectedCell, initialGrid, notes, status } = get();
-        if (!selectedCell) return;
-
-        // Allow in playing or creating
-        if (status !== 'playing' && status !== 'creating') return;
-
-        set({ activeHint: null });
-
-        const { row, col } = selectedCell;
-
-        if (initialGrid[row][col] !== null) return;
-
-        const key = `${row}-${col}`;
-        const currentNotes = notes[key] || [];
-        let newNotesList;
-
-        if (currentNotes.includes(value)) {
-          newNotesList = currentNotes.filter(n => n !== value);
-        } else {
-          newNotesList = [...currentNotes, value].sort();
-        }
-
-        const newNotes = { ...notes };
-        if (newNotesList.length === 0) {
-          delete newNotes[key];
-        } else {
-          newNotes[key] = newNotesList;
-        }
-
-        set({ notes: newNotes, hasMadeMoves: true });
-      },
-
-      undo: () => {
-        const { history, historyPointer } = get();
-        if (historyPointer > 0) {
-          const newPointer = historyPointer - 1;
-          set({
-            grid: history[newPointer].map(r => [...r]),
-            historyPointer: newPointer,
-            hasMadeMoves: true, // Undo counts as a move/interaction
-          });
-        }
-      },
-
-      clearCell: () => {
-        const { selectedCell, initialGrid, grid, history, historyPointer, notes } = get();
-        if (!selectedCell) return;
-        const { row, col } = selectedCell;
-
-        if (initialGrid[row][col] !== null) return;
-
-        const hasValue = grid[row][col] !== null;
-        const hasNotes = notes[`${row}-${col}`] && notes[`${row}-${col}`].length > 0;
-
-        if (!hasValue && !hasNotes) return;
-
-        const newGrid = grid.map(r => [...r]);
-        newGrid[row][col] = null;
-
-        const newHistory = history.slice(0, historyPointer + 1);
-        newHistory.push(newGrid.map(r => [...r]));
-
-        const newNotes = { ...notes };
-        if (hasNotes) {
-          delete newNotes[`${row}-${col}`];
-        }
-
-        set({
-          grid: newGrid,
-          history: newHistory,
-          historyPointer: newHistory.length - 1,
-          notes: newNotes,
-          hasMadeMoves: true,
-        });
-      },
-
-      toggleSettings: (setting) => {
-        set(state => ({
-          settings: { ...state.settings, [setting]: !state.settings[setting] }
-        }));
-      },
-
-      updateSettings: (newSettings: Partial<GameSettings>) => {
-        set(state => ({
-          settings: { ...state.settings, ...newSettings }
-        }));
-      },
-
-      setNotesMode: (enabled) => {
-        set(state => ({
-          settings: { ...state.settings, notesMode: enabled }
-        }));
-      },
-
-      setTempNotesMode: (enabled: boolean) => {
-        set({ tempNotesMode: enabled });
-      },
-
-      tickTimer: () => {
-        const { status, dailyDate, dailyProgress, timer } = get();
-        if (status === 'playing') {
-          const newTime = timer + 1;
-          set({ timer: newTime });
-
-          // Sync timer to daily progress
-          if (dailyDate) {
-            const dateKey = dailyDate.toISOString().split('T')[0];
-            // Only update if entry exists (it should, from confirmStartGame or previous save)
-            if (dailyProgress[dateKey]) {
-               set({
-                dailyProgress: {
-                  ...dailyProgress,
-                  [dateKey]: {
-                    ...dailyProgress[dateKey],
-                    timer: newTime
-                  }
-                }
-              });
-            }
-          }
+        if (grid[r][c] !== solution[r][c]) {
+          isCorrect = false;
         }
       }
-    }),
-    {
-      name: 'mini-sudoku-storage',
-      storage: createJSONStorage(() => storage),
-      partialize: (state) => ({ settings: state.settings, dailyProgress: state.dailyProgress }),
     }
-  )
-);
+
+    if (isFull && isCorrect) {
+      set({ status: GameStatus.Completed });
+
+      if (sessionId) {
+        updateGameProgress(sessionId, {
+          status: GameStatus.Completed,
+          completedOn: new Date(),
+          elapsedTime: timer
+        });
+      }
+    }
+  }
+}));

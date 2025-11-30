@@ -58,7 +58,7 @@ export function GameHeader() {
 
   const handleNewGame = (action: () => void, title: string, message: string) => {
     // Only ask for confirmation if game is in progress AND moves have been made
-    if (status === 'playing' && hasMadeMoves) {
+    if (status === 'In Progress' && hasMadeMoves) {
       setPendingAction({ action, title, message });
     } else {
       action();
@@ -92,7 +92,7 @@ export function GameHeader() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowResetConfirm(true)}
-                disabled={status !== 'playing'}
+                disabled={status !== 'In Progress'}
               >
                 <RotateCcw className="h-5 w-5" />
               </Button>
@@ -160,13 +160,16 @@ export function GameHeader() {
                   </div>
                 }
                 modifiers={{
-                  played: (date) => {
-                    const key = date.toISOString().split('T')[0];
-                    return !!useGameStore.getState().dailyProgress[key] && useGameStore.getState().dailyProgress[key].status === 'playing';
+                  played: (_date) => {
+                    // This logic needs to be updated to check DB or store state if we load all history.
+                    // For now, we might not have all daily progress in store.
+                    // We need a way to check if a daily challenge was played.
+                    // Since we removed dailyProgress from store, this feature is temporarily broken unless we fetch it.
+                    // For now, let's disable this visual indicator or implement a fetch.
+                    return false;
                   },
-                  won: (date) => {
-                    const key = date.toISOString().split('T')[0];
-                    return !!useGameStore.getState().dailyProgress[key] && useGameStore.getState().dailyProgress[key].status === 'won';
+                  won: (_date) => {
+                    return false;
                   }
                 }}
                 modifiersClassNames={{
@@ -248,7 +251,7 @@ export function GameHeader() {
       {status !== 'creating' && (
         <div className="flex w-full items-center justify-between px-2 mt-2">
           <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            {status === 'playing' || status === 'ready' || status === 'won' ? (
+            {status === 'In Progress' || status === 'Not Started' || status === 'Completed' ? (
               dailyDate ? (
                 <span>
                   {new Date(dailyDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} ({difficulty})
@@ -261,7 +264,7 @@ export function GameHeader() {
             )}
           </div>
 
-          {settings.showClock && (
+          {settings.showTimer && (
             <div className="font-mono text-sm font-medium tabular-nums text-neutral-600 dark:text-neutral-400">
               {formatTime(timer)}
             </div>

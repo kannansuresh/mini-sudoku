@@ -8,8 +8,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useTheme } from "@/components/theme-provider"
 
+import { useGameStore } from "@/store/gameStore"
+
 export function ModeToggle() {
   const { setTheme } = useTheme()
+  const { updateSettings } = useGameStore()
+
+  const handleThemeChange = (theme: "light" | "dark" | "system") => {
+    setTheme(theme)
+    updateSettings({ theme })
+  }
 
   return (
     <DropdownMenu>
@@ -21,13 +29,13 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("light")}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("dark")}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => handleThemeChange("system")}>
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

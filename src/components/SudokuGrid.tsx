@@ -13,15 +13,15 @@ export function SudokuGrid() {
   }, [grid]);
 
   const conflictingCells = useMemo(() => {
-    if (settings.autocheck === 'off' && !isGridFull) return new Set<string>();
+    if (settings.autoCheck === 'Off' && !isGridFull) return new Set<string>();
     return getConflictingCells(grid);
-  }, [grid, settings.autocheck, isGridFull]);
+  }, [grid, settings.autoCheck, isGridFull]);
 
   if (!grid || grid.length === 0) return null;
 
   return (
     <div className="relative mx-auto w-full max-w-md select-none">
-      {status === 'ready' && <StartGameOverlay />}
+      {status === 'Not Started' && <StartGameOverlay />}
 
       <div className="overflow-hidden rounded-lg border-2 border-neutral-800 shadow-lg dark:border-neutral-200">
         {grid.map((row, rowIndex) => (

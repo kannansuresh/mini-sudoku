@@ -3,7 +3,7 @@ import { useGameStore } from "@/store/gameStore";
 import { Play } from "lucide-react";
 
 export function StartGameOverlay() {
-  const { confirmStartGame, difficulty, dailyDate, dailyProgress } = useGameStore();
+  const { confirmStartGame, difficulty, dailyDate, hasMadeMoves } = useGameStore();
 
   let title = "Ready to Play?";
   let buttonText = "Start Game";
@@ -11,10 +11,8 @@ export function StartGameOverlay() {
   if (dailyDate) {
     const today = new Date();
     const isToday = dailyDate.toISOString().split('T')[0] === today.toISOString().split('T')[0];
-    const dateKey = dailyDate.toISOString().split('T')[0];
-    const hasProgress = !!dailyProgress[dateKey];
 
-    if (hasProgress) {
+    if (hasMadeMoves) {
       title = "Ready to continue with this challenge?";
       buttonText = "Continue Challenge";
     } else if (isToday) {

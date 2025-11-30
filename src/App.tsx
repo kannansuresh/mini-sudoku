@@ -6,15 +6,23 @@ import { Controls } from "@/components/Controls";
 import { GameHeader } from "@/components/GameHeader";
 import { isValid } from "@/lib/sudoku";
 import confetti from "canvas-confetti";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-function App() {
-  const { status, initializeGame, setCellValue, undo, clearCell, selectedCell, selectCell, toggleNote } = useGameStore();
+function GameContent() {
+  const { status, initializeStore, setCellValue, undo, clearCell, selectedCell, selectCell, toggleNote, settings } = useGameStore();
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     // Initialize game based on settings (default mode)
-    initializeGame();
-  }, [initializeGame]);
+    initializeStore();
+  }, [initializeStore]);
+
+  // Sync theme from store to ThemeProvider
+  useEffect(() => {
+    if (settings.theme) {
+      setTheme(settings.theme);
+    }
+  }, [settings.theme, setTheme]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -23,7 +31,7 @@ function App() {
         useGameStore.getState().setTempNotesMode(true);
       }
 
-      if (status !== 'playing' && status !== 'creating') return;
+      if (status !== 'In Progress' && status !== 'creating') return;
 
       // Numbers 1-6
       if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
@@ -81,7 +89,7 @@ function App() {
   }, [status, selectedCell, setCellValue, undo, clearCell, selectCell, toggleNote]);
 
   useEffect(() => {
-    if (status === 'won') {
+    if (status === 'Completed') {
       const duration = 3 * 1000;
       const animationEnd = Date.now() + duration;
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
@@ -113,26 +121,32 @@ function App() {
   }, [status]);
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-      <div className="flex min-h-screen w-full items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
-        <div className="w-fit">
-          <GameHeader />
+    <div className="flex min-h-screen w-full items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
+      <div className="w-fit">
+        <GameHeader />
 
-          <main className="relative flex w-fit flex-col items-center gap-4 rounded-xl bg-white p-4 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
-            <div className="relative z-10">
-              <SudokuGrid />
-            </div>
+        <main className="relative flex w-fit flex-col items-center gap-4 rounded-xl bg-white p-4 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
+          <div className="relative z-10">
+            <SudokuGrid />
+          </div>
 
-            <div className="w-[18.5rem] sm:w-[26rem]">
-              <Controls />
-            </div>
+          <div className="w-[18.5rem] sm:w-[26rem]">
+            <Controls />
+          </div>
 
-            <div className="w-full max-w-md">
-              <Keyboard />
-            </div>
-          </main>
-        </div>
+          <div className="w-full max-w-md">
+            <Keyboard />
+          </div>
+        </main>
       </div>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <GameContent />
       <Toaster />
     </ThemeProvider>
   );

@@ -38,13 +38,13 @@ export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: Cel
 
   // Determine effective autocheck mode
   // If grid is full and autocheck is off, treat it as 'mistakes' to show errors
-  const effectiveAutocheck = (settings.autocheck === 'off' && isGridFull) ? 'mistakes' : settings.autocheck;
-
-  // Check against solution for "wrong value" (even if unique)
-  const isSolutionError = effectiveAutocheck === 'mistakes' && value !== null && value !== solution[row][col];
+  const effectiveAutocheck = (settings.autoCheck === 'Off' && isGridFull) ? 'Mistakes' : settings.autoCheck;
 
   // Combine conflict (duplicate) and solution error
-  const isError = (effectiveAutocheck !== 'off' && isConflict) || isSolutionError;
+  const isError = value !== null && (
+    (effectiveAutocheck === 'Mistakes' && value !== solution[row][col]) ||
+    (effectiveAutocheck === 'Conflicts' && isConflict)
+  );
 
   const cellNotes = notes[`${row}-${col}`] || [];
 
@@ -71,7 +71,7 @@ export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: Cel
         isError && "text-red-600 dark:text-red-400",
 
         // Won state
-        status === 'won' && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+        status === 'Completed' && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
       )}
     >
       {value !== null ? (
