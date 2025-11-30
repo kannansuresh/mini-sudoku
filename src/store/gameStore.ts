@@ -29,6 +29,14 @@ interface GameState {
   tempNotesMode: boolean;
   hasMadeMoves: boolean;
   dailyDate: Date | null;
+  dailyProgress: Record<string, {
+    grid: Grid;
+    history: Grid[];
+    historyPointer: number;
+    timer: number;
+    status: 'playing' | 'won';
+    notes: Record<string, number[]>;
+  }>;
 
   // Actions
   startGame: (difficulty: Difficulty, customGrid?: Grid) => void;
@@ -97,6 +105,7 @@ export const useGameStore = create<GameState>()(
       tempNotesMode: false,
       hasMadeMoves: false,
       dailyDate: null,
+      dailyProgress: {},
 
       startGame: (difficulty, customGrid) => {
         // Reset seed to random for normal games
@@ -137,33 +146,52 @@ export const useGameStore = create<GameState>()(
       },
 
       startDailyGame: (date?: Date) => {
-        const seed = getDailySeed(date);
-        const difficulty = getDailyDifficulty(date);
+        const targetDate = date || new Date();
+        const dateKey = targetDate.toISOString().split('T')[0];
+        const { dailyProgress, settings } = get();
 
+        const seed = getDailySeed(targetDate);
+        const difficulty = getDailyDifficulty(targetDate);
         setSeed(seed);
 
         const puzzle = generateSudoku(difficulty);
         const solution = puzzle.map(row => [...row]);
         solveSudoku(solution);
-
         const initial = puzzle.map(row => [...row]);
 
-        const { settings } = get();
-
-        set({
-          grid: puzzle,
-          solution: solution,
-          initialGrid: initial,
-          notes: {},
-          selectedCell: null,
-          history: [puzzle.map(row => [...row])],
-          historyPointer: 0,
-          difficulty,
-          status: settings.skipStartOverlay ? 'playing' : 'ready',
-          timer: 0,
-          hasMadeMoves: false,
-          dailyDate: date || new Date(),
-        });
+        // Check if we have saved progress
+        if (dailyProgress[dateKey]) {
+          const saved = dailyProgress[dateKey];
+          set({
+            grid: saved.grid,
+            solution: solution, // Solution is deterministic based on seed
+            initialGrid: initial, // Initial is deterministic based on seed
+            notes: saved.notes,
+            selectedCell: null,
+            history: saved.history,
+            historyPointer: saved.historyPointer,
+            difficulty,
+            status: saved.status === 'won' ? 'won' : (settings.skipStartOverlay ? 'playing' : 'ready'),
+            timer: saved.timer,
+            hasMadeMoves: true,
+            dailyDate: targetDate,
+          });
+        } else {
+          set({
+            grid: puzzle,
+            solution: solution,
+            initialGrid: initial,
+            notes: {},
+            selectedCell: null,
+            history: [puzzle.map(row => [...row])],
+            historyPointer: 0,
+            difficulty,
+            status: settings.skipStartOverlay ? 'playing' : 'ready',
+            timer: 0,
+            hasMadeMoves: false,
+            dailyDate: targetDate,
+          });
+        }
       },
 
       confirmStartGame: () => {
@@ -277,6 +305,23 @@ export const useGameStore = create<GameState>()(
 
         if (isFull && isCorrect) {
           set({ status: 'won' });
+
+          // Update daily progress to won
+          const { dailyDate, dailyProgress } = get();
+          if (dailyDate) {
+            const dateKey = dailyDate.toISOString().split('T')[0];
+            if (dailyProgress[dateKey]) {
+              set({
+                dailyProgress: {
+                  ...dailyProgress,
+                  [dateKey]: {
+                    ...dailyProgress[dateKey],
+                    status: 'won'
+                  }
+                }
+              });
+            }
+          }
         }
       },
 
@@ -328,6 +373,25 @@ export const useGameStore = create<GameState>()(
           notes: newNotes,
           hasMadeMoves: true,
         });
+
+        // Save daily progress if applicable
+        const { dailyDate, dailyProgress, timer } = get();
+        if (dailyDate) {
+          const dateKey = dailyDate.toISOString().split('T')[0];
+          set({
+            dailyProgress: {
+              ...dailyProgress,
+              [dateKey]: {
+                grid: newGrid,
+                history: newHistory,
+                historyPointer: newHistory.length - 1,
+                timer,
+                status: 'playing',
+                notes: newNotes,
+              }
+            }
+          });
+        }
 
         if (status === 'playing') {
           get().checkWin();
@@ -442,7 +506,7 @@ export const useGameStore = create<GameState>()(
     {
       name: 'mini-sudoku-storage',
       storage: createJSONStorage(() => storage),
-      partialize: (state) => ({ settings: state.settings }),
+      partialize: (state) => ({ settings: state.settings, dailyProgress: state.dailyProgress }),
     }
   )
 );

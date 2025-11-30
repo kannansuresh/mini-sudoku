@@ -155,6 +155,20 @@ export function GameHeader() {
                     </Button>
                   </div>
                 }
+                modifiers={{
+                  played: (date) => {
+                    const key = date.toISOString().split('T')[0];
+                    return !!useGameStore.getState().dailyProgress[key] && useGameStore.getState().dailyProgress[key].status === 'playing';
+                  },
+                  won: (date) => {
+                    const key = date.toISOString().split('T')[0];
+                    return !!useGameStore.getState().dailyProgress[key] && useGameStore.getState().dailyProgress[key].status === 'won';
+                  }
+                }}
+                modifiersClassNames={{
+                  played: "text-amber-600 dark:text-amber-400 font-bold",
+                  won: "text-green-600 dark:text-green-400 font-bold"
+                }}
               />
             </PopoverContent>
           </Popover>
