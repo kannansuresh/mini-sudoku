@@ -56,20 +56,36 @@ export function Keyboard() {
                      (settings.showAvailablePlacements && !isPlacementValid(num)) ||
                      isInitial;
 
+    const isNotes = settings.notesMode || tempNotesMode;
+
     return (
       <Button
         key={num}
         variant="outline"
         className={cn(
-          "relative flex h-14 w-full flex-col items-center justify-center p-0 text-2xl font-medium sm:h-16 sm:text-3xl",
+          "relative flex h-14 w-full flex-col items-center justify-center p-0 text-2xl font-medium sm:h-16 sm:text-3xl transition-all duration-200 ease-in-out",
           "bg-white dark:bg-neutral-800",
-          (settings.notesMode || tempNotesMode) && "font-['Patrick_Hand'] italic",
           disabled && "opacity-20 pointer-events-none"
         )}
         onClick={() => handleNumberClick(num as CellValue)}
         disabled={disabled || status === 'Completed'}
       >
-        <span>{num}</span>
+        <div className="relative flex items-center justify-center w-full h-full">
+          {/* Normal Font */}
+          <span className={cn(
+            "absolute transition-opacity duration-200 ease-in-out",
+            isNotes ? "opacity-0 scale-90" : "opacity-100 scale-100"
+          )}>
+            {num}
+          </span>
+          {/* Notes Font */}
+          <span className={cn(
+            "absolute transition-all duration-200 ease-in-out font-['Patrick_Hand'] italic",
+            isNotes ? "opacity-100 scale-110" : "opacity-0 scale-90"
+          )}>
+            {num}
+          </span>
+        </div>
         {settings.remainingCount && !finished && !settings.notesMode && !tempNotesMode && (
           <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-100 text-[10px] font-bold text-neutral-600 shadow-sm ring-1 ring-neutral-200 dark:bg-neutral-700 dark:text-neutral-300 dark:ring-neutral-600">
             {getRemainingCount(num)}

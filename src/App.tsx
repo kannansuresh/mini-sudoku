@@ -148,6 +148,8 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
       <GameContent />
       <Toaster />
+      {/* Preload font to prevent layout shift/delay on first use */}
+      <span className="font-['Patrick_Hand'] opacity-0 absolute pointer-events-none">Preload</span>
     </ThemeProvider>
   );
 }
