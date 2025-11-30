@@ -1,8 +1,9 @@
 import { useGameStore } from "@/store/gameStore";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, X } from "lucide-react";
-import { useState } from "react";
+import { Settings as SettingsIcon, X, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
@@ -10,15 +11,30 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// I need to add Switch component from Shadcn first.
-// I'll assume I'll add it in the next step or use a simple HTML checkbox for now if I don't want to run another command immediately.
-// But I should use Shadcn Switch for "Premium" feel.
-// I will add the Switch component via command in the next step.
-// For now I will write the code assuming it exists.
-
 export function SettingsModal() {
-  const { settings, toggleSettings } = useGameStore();
+  const { settings, updateSettings } = useGameStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [localSettings, setLocalSettings] = useState(settings);
+
+  // Reset local settings when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLocalSettings(settings);
+    }
+  }, [isOpen, settings]);
+
+  const handleToggle = (key: keyof typeof settings) => {
+    setLocalSettings(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleSave = () => {
+    updateSettings(localSettings);
+    setIsOpen(false);
+    toast.success("Settings saved successfully");
+  };
 
   if (!isOpen) {
     return (
@@ -51,49 +67,55 @@ export function SettingsModal() {
           <SettingToggle
             label="Show Clock"
             description="Show the elapsed time"
-            checked={settings.showClock}
-            onChange={() => toggleSettings('showClock')}
+            checked={localSettings.showClock}
+            onChange={() => handleToggle('showClock')}
           />
           <SettingToggle
             label="Autocheck"
             description="Highlight errors automatically"
-            checked={settings.autocheck}
-            onChange={() => toggleSettings('autocheck')}
+            checked={localSettings.autocheck}
+            onChange={() => handleToggle('autocheck')}
           />
           <SettingToggle
             label="Highlight Sections"
             description="Highlight row, column, and region"
-            checked={settings.highlightSections}
-            onChange={() => toggleSettings('highlightSections')}
+            checked={localSettings.highlightSections}
+            onChange={() => handleToggle('highlightSections')}
           />
           <SettingToggle
             label="Count Remaining"
             description="Show remaining count for each number"
-            checked={settings.countRemaining}
-            onChange={() => toggleSettings('countRemaining')}
+            checked={localSettings.countRemaining}
+            onChange={() => handleToggle('countRemaining')}
           />
           <SettingToggle
             label="Show Available Placements"
             description="Disable invalid numbers on keyboard"
-            checked={settings.showAvailablePlacements}
-            onChange={() => toggleSettings('showAvailablePlacements')}
+            checked={localSettings.showAvailablePlacements}
+            onChange={() => handleToggle('showAvailablePlacements')}
           />
           <SettingToggle
             label="Hide Finished Numbers"
             description="Disable completed numbers"
-            checked={settings.hideFinishedNumber}
-            onChange={() => toggleSettings('hideFinishedNumber')}
+            checked={localSettings.hideFinishedNumber}
+            onChange={() => handleToggle('hideFinishedNumber')}
           />
           <SettingToggle
             label="Skip Start Banner"
             description="Start game immediately"
-            checked={settings.skipStartOverlay}
-            onChange={() => toggleSettings('skipStartOverlay')}
+            checked={localSettings.skipStartOverlay}
+            onChange={() => handleToggle('skipStartOverlay')}
           />
         </div>
 
-        <div className="mt-8 text-center text-sm text-neutral-500">
-          <p>Mini Sudoku v1.0</p>
+        <div className="mt-8 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave}>
+            <Save className="mr-2 h-4 w-4" />
+            Save Changes
+          </Button>
         </div>
       </div>
     </div>

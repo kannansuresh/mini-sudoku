@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RotateCcw, Calendar, PenLine, Play } from "lucide-react";
+import { RotateCcw, Calendar, PenLine, Play, Github } from "lucide-react";
 
 import {
   AlertDialog,
@@ -160,6 +160,19 @@ export function GameHeader() {
 
           <SettingsModal />
           <ModeToggle />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" asChild>
+                <a href="https://github.com/kannansuresh" target="_blank" rel="noopener noreferrer">
+                  <Github className="h-5 w-5" />
+                </a>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View on GitHub</p>
+            </TooltipContent>
+          </Tooltip>
         </TooltipProvider>
       </div>
 
@@ -167,11 +180,11 @@ export function GameHeader() {
       {status !== 'creating' && (
         <div className="flex w-full items-center justify-between px-2 mt-2">
           <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            {status === 'playing' ? difficulty : 'Select a game'}
+            {status === 'playing' ? difficulty : (status === 'ready' ? null : 'Select a game')}
           </div>
 
           {settings.showClock && (
-            <div className="font-mono text-lg font-medium tabular-nums text-neutral-600 dark:text-neutral-400">
+            <div className="font-mono text-sm font-medium tabular-nums text-neutral-600 dark:text-neutral-400">
               {formatTime(timer)}
             </div>
           )}

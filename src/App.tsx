@@ -7,6 +7,7 @@ import { GameHeader } from "@/components/GameHeader";
 import { isValid } from "@/lib/sudoku";
 import confetti from "canvas-confetti";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 function App() {
   const { status, startGame, setCellValue, undo, clearCell, selectedCell, selectCell, toggleNote } = useGameStore();
 
@@ -132,14 +133,9 @@ function App() {
               <Keyboard />
             </div>
           </main>
-
-          <footer className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
-            <p>
-              Built by <a href="https://github.com/kannansuresh" className="font-medium underline underline-offset-4 hover:text-neutral-900 dark:hover:text-neutral-100">Kannan Suresh</a>
-            </p>
-          </footer>
         </div>
       </div>
+      <Toaster />
     </ThemeProvider>
   );
 }
