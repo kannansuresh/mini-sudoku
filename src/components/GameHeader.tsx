@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { RotateCcw, Calendar, PenLine, Play, Github } from "lucide-react";
+import { Calendar, PenLine, Play, Github } from "lucide-react";
 
 import {
   AlertDialog,
@@ -39,9 +39,8 @@ import {
 } from "@/components/ui/popover";
 
 export function GameHeader() {
-  const { timer, settings, tickTimer, startGame, status, difficulty, resetGame, hasMadeMoves, dailyDate, dailyHistory, loadDailyHistory } = useGameStore();
+  const { timer, settings, tickTimer, startGame, status, difficulty, hasMadeMoves, dailyDate, dailyHistory, loadDailyHistory } = useGameStore();
   const [pendingAction, setPendingAction] = useState<{ action: () => void, message: string, title: string } | null>(null);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -245,21 +244,7 @@ export function GameHeader() {
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowResetConfirm(true)}
-                disabled={status !== 'In Progress'}
-              >
-                <RotateCcw className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Reset Puzzle</p>
-            </TooltipContent>
-          </Tooltip>
+
 
           <SettingsModal />
           <ModeToggle />
@@ -315,21 +300,6 @@ export function GameHeader() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmNewGame}>Continue</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset Puzzle?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to reset the current puzzle to its initial state? All your progress will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { resetGame(); setShowResetConfirm(false); }}>Reset</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

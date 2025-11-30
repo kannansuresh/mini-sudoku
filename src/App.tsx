@@ -26,12 +26,12 @@ function GameContent() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (status !== 'In Progress' && status !== 'creating') return;
+
       // Shift key for temp notes mode
       if (e.key === 'Shift') {
         useGameStore.getState().setTempNotesMode(true);
       }
-
-      if (status !== 'In Progress' && status !== 'creating') return;
 
       // Numbers 1-6
       if (['1', '2', '3', '4', '5', '6'].includes(e.key)) {
@@ -75,6 +75,7 @@ function GameContent() {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      if (status !== 'In Progress' && status !== 'creating') return;
       if (e.key === 'Shift') {
         useGameStore.getState().setTempNotesMode(false);
       }
