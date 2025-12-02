@@ -15,7 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { useTheme } from "@/components/theme-provider";
 
-export function SettingsModal() {
+interface SettingsModalProps {
+  trigger?: React.ReactNode;
+}
+
+export function SettingsModal({ trigger }: SettingsModalProps) {
   const { settings, updateSettings } = useGameStore();
   const [isOpen, setIsOpen] = useState(false);
   const [localSettings, setLocalSettings] = useState(settings);
@@ -56,6 +60,9 @@ export function SettingsModal() {
   };
 
   if (!isOpen) {
+    if (trigger) {
+      return <div onClick={() => setIsOpen(true)}>{trigger}</div>;
+    }
     return (
       <TooltipProvider>
         <Tooltip>
