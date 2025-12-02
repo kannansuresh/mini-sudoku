@@ -77,172 +77,174 @@ export function NavBar() {
   const todayStatus = getTodayStatus();
 
   return (
-    <nav className="flex w-full items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-950">
-      <div className="flex items-center gap-2">
-        <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
-          Mini Sudoku
-        </h1>
-      </div>
+    <nav className="w-full border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
+            Mini Sudoku
+          </h1>
+        </div>
 
-      <div className="flex items-center gap-1 sm:gap-2">
-        <TooltipProvider>
-          <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Play className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>New Game</p>
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent align="end">
-              {(['Easy', 'Medium', 'Hard'] as Difficulty[]).map((d) => (
-                <DropdownMenuItem key={d} onClick={() => handleNewGame(
-                  () => startGame(d),
-                  "Start New Game?",
-                  dailyDate
-                    ? `Are you sure you want to start a new ${d} game? Your progress will be saved up until now including elapsed time.`
-                    : `Are you sure you want to start a new ${d} game? Your current progress will be lost.`
-                )}>
-                  {d}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Popover open={isCalendarOpen} onOpenChange={(open) => {
-            setIsCalendarOpen(open);
-            if (open) {
-              loadDailyHistory();
-            }
-          }}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Calendar className={`h-5 w-5 ${todayStatus === 'In Progress' ? 'text-amber-600 dark:text-amber-400' : todayStatus === 'Completed' ? 'text-green-600 dark:text-green-400' : ''}`} />
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Daily Challenge</p>
-              </TooltipContent>
-            </Tooltip>
-            <PopoverContent className="w-auto p-0" align="end">
-              <CalendarComponent
-                mode="single"
-                selected={dailyDate ? new Date(dailyDate) : new Date()}
-                onSelect={(date: Date | undefined) => {
-                  if (date) {
-                    setIsCalendarOpen(false);
-                    handleNewGame(
-                      () => useGameStore.getState().startDailyGame(date),
-                      "Start Daily Challenge?",
-                      dailyDate
-                        ? `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your progress will be saved up until now including elapsed time.`
-                        : `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your current progress will be lost.`
-                    );
-                  }
-                }}
-                disabled={(date: Date) => date > new Date() || date < new Date("2025-11-21")}
-                startMonth={new Date("2025-11-01")}
-                endMonth={new Date()}
-                captionLayout="dropdown"
-                fromYear={2025}
-                toYear={new Date().getFullYear()}
-                initialFocus
-                footer={
-                  <div className="flex justify-center pt-3 border-t mt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-7 text-xs font-normal"
-                      onClick={() => {
-                        setIsCalendarOpen(false);
-                        handleNewGame(
-                          () => useGameStore.getState().startDailyGame(new Date()),
-                          "Start Daily Challenge?",
-                          dailyDate
-                            ? "Are you sure you want to start the Daily Challenge for today? Your progress will be saved up until now including elapsed time."
-                            : "Are you sure you want to start the Daily Challenge for today? Your current progress will be lost."
-                        );
-                      }}
-                    >
-                      Go to Today
+        <div className="flex items-center gap-1 sm:gap-2">
+          <TooltipProvider>
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Play className="h-5 w-5" />
                     </Button>
-                  </div>
-                }
-                modifiers={{
-                  played: (date) => {
-                    return dailyHistory.some(s => {
-                      if (!s.targetDate) return false;
-                      const d = new Date(s.targetDate);
-                      return d.getDate() === date.getDate() &&
-                             d.getMonth() === date.getMonth() &&
-                             d.getFullYear() === date.getFullYear() &&
-                             s.status === 'In Progress';
-                    });
-                  },
-                  won: (date) => {
-                    return dailyHistory.some(s => {
-                      if (!s.targetDate) return false;
-                      const d = new Date(s.targetDate);
-                      return d.getDate() === date.getDate() &&
-                             d.getMonth() === date.getMonth() &&
-                             d.getFullYear() === date.getFullYear() &&
-                             s.status === 'Completed';
-                    });
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>New Game</p>
+                </TooltipContent>
+              </Tooltip>
+              <DropdownMenuContent align="end">
+                {(['Easy', 'Medium', 'Hard'] as Difficulty[]).map((d) => (
+                  <DropdownMenuItem key={d} onClick={() => handleNewGame(
+                    () => startGame(d),
+                    "Start New Game?",
+                    dailyDate
+                      ? `Are you sure you want to start a new ${d} game? Your progress will be saved up until now including elapsed time.`
+                      : `Are you sure you want to start a new ${d} game? Your current progress will be lost.`
+                  )}>
+                    {d}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Popover open={isCalendarOpen} onOpenChange={(open) => {
+              setIsCalendarOpen(open);
+              if (open) {
+                loadDailyHistory();
+              }
+            }}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Calendar className={`h-5 w-5 ${todayStatus === 'In Progress' ? 'text-amber-600 dark:text-amber-400' : todayStatus === 'Completed' ? 'text-green-600 dark:text-green-400' : ''}`} />
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Daily Challenge</p>
+                </TooltipContent>
+              </Tooltip>
+              <PopoverContent className="w-auto p-0" align="end">
+                <CalendarComponent
+                  mode="single"
+                  selected={dailyDate ? new Date(dailyDate) : new Date()}
+                  onSelect={(date: Date | undefined) => {
+                    if (date) {
+                      setIsCalendarOpen(false);
+                      handleNewGame(
+                        () => useGameStore.getState().startDailyGame(date),
+                        "Start Daily Challenge?",
+                        dailyDate
+                          ? `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your progress will be saved up until now including elapsed time.`
+                          : `Are you sure you want to start the Daily Challenge for ${date.toLocaleDateString()}? Your current progress will be lost.`
+                      );
+                    }
+                  }}
+                  disabled={(date: Date) => date > new Date() || date < new Date("2025-11-21")}
+                  startMonth={new Date("2025-11-01")}
+                  endMonth={new Date()}
+                  captionLayout="dropdown"
+                  fromYear={2025}
+                  toYear={new Date().getFullYear()}
+                  initialFocus
+                  footer={
+                    <div className="flex justify-center pt-3 border-t mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full h-7 text-xs font-normal"
+                        onClick={() => {
+                          setIsCalendarOpen(false);
+                          handleNewGame(
+                            () => useGameStore.getState().startDailyGame(new Date()),
+                            "Start Daily Challenge?",
+                            dailyDate
+                              ? "Are you sure you want to start the Daily Challenge for today? Your progress will be saved up until now including elapsed time."
+                              : "Are you sure you want to start the Daily Challenge for today? Your current progress will be lost."
+                          );
+                        }}
+                      >
+                        Go to Today
+                      </Button>
+                    </div>
                   }
-                }}
-                modifiersClassNames={{
-                  played: "text-amber-600 dark:text-amber-400 font-bold",
-                  won: "text-green-600 dark:text-green-400 font-bold"
-                }}
-              />
-            </PopoverContent>
-          </Popover>
+                  modifiers={{
+                    played: (date) => {
+                      return dailyHistory.some(s => {
+                        if (!s.targetDate) return false;
+                        const d = new Date(s.targetDate);
+                        return d.getDate() === date.getDate() &&
+                               d.getMonth() === date.getMonth() &&
+                               d.getFullYear() === date.getFullYear() &&
+                               s.status === 'In Progress';
+                      });
+                    },
+                    won: (date) => {
+                      return dailyHistory.some(s => {
+                        if (!s.targetDate) return false;
+                        const d = new Date(s.targetDate);
+                        return d.getDate() === date.getDate() &&
+                               d.getMonth() === date.getMonth() &&
+                               d.getFullYear() === date.getFullYear() &&
+                               s.status === 'Completed';
+                      });
+                    }
+                  }}
+                  modifiersClassNames={{
+                    played: "text-amber-600 dark:text-amber-400 font-bold",
+                    won: "text-green-600 dark:text-green-400 font-bold"
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleNewGame(
-                  () => useGameStore.getState().enterCreateMode(),
-                  "Create Custom Puzzle?",
-                  dailyDate
-                    ? "Are you sure you want to create a custom puzzle? Your progress will be saved up until now including elapsed time."
-                    : "Are you sure you want to create a custom puzzle? Your current progress will be lost."
-                )}
-              >
-                <PenLine className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Create Custom Puzzle</p>
-            </TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleNewGame(
+                    () => useGameStore.getState().enterCreateMode(),
+                    "Create Custom Puzzle?",
+                    dailyDate
+                      ? "Are you sure you want to create a custom puzzle? Your progress will be saved up until now including elapsed time."
+                      : "Are you sure you want to create a custom puzzle? Your current progress will be lost."
+                  )}
+                >
+                  <PenLine className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create Custom Puzzle</p>
+              </TooltipContent>
+            </Tooltip>
 
-          <SettingsModal />
-          <ModeToggle />
+            <SettingsModal />
+            <ModeToggle />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" asChild>
-                <a href="https://github.com/kannansuresh" target="_blank" rel="noopener noreferrer">
-                  <Github className="h-5 w-5" />
-                </a>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>View on GitHub</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" asChild>
+                  <a href="https://github.com/kannansuresh" target="_blank" rel="noopener noreferrer">
+                    <Github className="h-5 w-5" />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View on GitHub</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       <AlertDialog open={!!pendingAction} onOpenChange={(open) => !open && setPendingAction(null)}>
