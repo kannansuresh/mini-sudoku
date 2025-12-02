@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 import { useGameStore } from "@/store/gameStore";
 import type { CellValue } from "@/lib/sudoku";
+import { useRef, useEffect } from "react";
+import confetti from "canvas-confetti";
 
 interface CellProps {
   row: number;
@@ -12,6 +14,7 @@ interface CellProps {
 }
 
 export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: CellProps) {
+  const cellRef = useRef<HTMLDivElement>(null);
   const {
     selectedCell,
     selectCell,
@@ -20,11 +23,34 @@ export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: Cel
     grid,
     solution,
     status,
-    activeHint
+    activeHint,
+    animatingCells
   } = useGameStore();
 
   const isSelected = selectedCell?.row === row && selectedCell?.col === col;
   const isHintTarget = activeHint?.row === row && activeHint?.col === col;
+  const isAnimating = animatingCells.includes(`${row}-${col}`);
+
+  useEffect(() => {
+    if (isAnimating && cellRef.current) {
+      const rect = cellRef.current.getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+      confetti({
+        origin: { x, y },
+        particleCount: 8,
+        spread: 50,
+        startVelocity: 8,
+        scalar: 0.6,
+        ticks: 50,
+        gravity: 0.8,
+        colors: ['#22c55e', '#eab308', '#3b82f6', '#a855f7'],
+        disableForReducedMotion: true,
+        zIndex: 50,
+      });
+    }
+  }, [isAnimating]);
 
   // Highlight logic
   const isRelated = selectedCell && (
@@ -50,6 +76,7 @@ export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: Cel
 
   return (
     <div
+      ref={cellRef}
       onClick={() => selectCell(row, col)}
       style={isError ? {
         backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(220, 38, 38, 0.1) 5px, rgba(220, 38, 38, 0.1) 10px)"
@@ -71,7 +98,11 @@ export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: Cel
         isError && "text-red-600 dark:text-red-400",
 
         // Won state
-        status === 'Completed' && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+        // Won state
+        status === 'Completed' && "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
+
+        // Success Animation
+        isAnimating && "animate-confetti-flash z-10"
       )}
     >
       {value !== null ? (

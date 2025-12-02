@@ -122,3 +122,19 @@
     @apply cursor-pointer;
   }
 }
+@keyframes confetti-flash {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: var(--color-green-200); }
+}
+
+.animate-confetti-flash {
+  animation: confetti-flash 1s ease-in-out;
+}
+
+/* Dark mode override if needed, though usually handled by opacity or variable */
+@media (prefers-color-scheme: dark) {
+  @keyframes confetti-flash {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: rgba(34, 197, 94, 0.3); } /* green-500 with opacity */
+  }
+}

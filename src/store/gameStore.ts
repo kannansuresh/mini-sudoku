@@ -44,6 +44,7 @@ interface GameState {
   dailyHistory: GameSession[];
   initialized: boolean;
   isInitializing: boolean;
+  animatingCells: string[]; // "r-c" strings
 
   // Actions
   initializeStore: () => Promise<void>;
@@ -107,6 +108,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   dailyHistory: [],
   initialized: false,
   isInitializing: false,
+  animatingCells: [],
 
   loadDailyHistory: async () => {
     const { player } = get();
@@ -508,6 +510,63 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
 
     if (status === GameStatus.InProgress) {
+      // Check for completed units (Row, Col, Region) to trigger animation
+      const newAnimatingCells: string[] = [];
+      const { grid: currentGrid, solution: currentSolution } = get(); // Get latest grid
+
+      // Check Row
+      let rowComplete = true;
+      for (let c = 0; c < 6; c++) {
+        if (currentGrid[row][c] !== currentSolution[row][c]) {
+          rowComplete = false;
+          break;
+        }
+      }
+      if (rowComplete) {
+        for (let c = 0; c < 6; c++) newAnimatingCells.push(`${row}-${c}`);
+      }
+
+      // Check Column
+      let colComplete = true;
+      for (let r = 0; r < 6; r++) {
+        if (currentGrid[r][col] !== currentSolution[r][col]) {
+          colComplete = false;
+          break;
+        }
+      }
+      if (colComplete) {
+        for (let r = 0; r < 6; r++) newAnimatingCells.push(`${r}-${col}`);
+      }
+
+      // Check Region
+      const boxHeight = 2;
+      const boxWidth = 3;
+      const startRow = Math.floor(row / boxHeight) * boxHeight;
+      const startCol = Math.floor(col / boxWidth) * boxWidth;
+      let regionComplete = true;
+      for (let r = 0; r < boxHeight; r++) {
+        for (let c = 0; c < boxWidth; c++) {
+          if (currentGrid[startRow + r][startCol + c] !== currentSolution[startRow + r][startCol + c]) {
+            regionComplete = false;
+            break;
+          }
+        }
+      }
+      if (regionComplete) {
+        for (let r = 0; r < boxHeight; r++) {
+          for (let c = 0; c < boxWidth; c++) {
+            newAnimatingCells.push(`${startRow + r}-${startCol + c}`);
+          }
+        }
+      }
+
+      if (newAnimatingCells.length > 0) {
+        set({ animatingCells: newAnimatingCells });
+        setTimeout(() => {
+          set({ animatingCells: [] });
+        }, 1000); // 1 second animation
+      }
+
       get().checkWin();
     }
   },
