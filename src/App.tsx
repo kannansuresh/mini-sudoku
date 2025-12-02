@@ -3,7 +3,8 @@ import { useGameStore } from "@/store/gameStore";
 import { SudokuGrid } from "@/components/SudokuGrid";
 import { Keyboard } from "@/components/Keyboard";
 import { Controls } from "@/components/Controls";
-import { GameHeader } from "@/components/GameHeader";
+import { NavBar } from "@/components/NavBar";
+import { GameInfo } from "@/components/GameInfo";
 import { isValid } from "@/lib/sudoku";
 import confetti from "canvas-confetti";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
@@ -122,11 +123,11 @@ function GameContent() {
   }, [status]);
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-      <div className="w-fit p-2 sm:p-4">
-        <GameHeader />
-
+    <div className="flex min-h-dvh w-full flex-col bg-neutral-50 dark:bg-neutral-950">
+      <NavBar />
+      <div className="flex flex-1 items-center justify-center p-2 sm:p-4">
         <main className="relative flex w-fit flex-col items-center gap-4 rounded-xl bg-white p-3 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
+          <GameInfo />
           <div className="relative z-10">
             <SudokuGrid />
           </div>

@@ -1,5 +1,5 @@
 import { useGameStore } from "@/store/gameStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SettingsModal } from "./SettingsModal";
 import { ModeToggle } from "./mode-toggle";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
 
 import {
   Tooltip,
@@ -38,22 +37,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export function GameHeader() {
-  const { timer, settings, tickTimer, startGame, status, difficulty, hasMadeMoves, dailyDate, dailyHistory, loadDailyHistory } = useGameStore();
+export function NavBar() {
+  const { startGame, status, hasMadeMoves, dailyDate, dailyHistory, loadDailyHistory } = useGameStore();
   const [pendingAction, setPendingAction] = useState<{ action: () => void, message: string, title: string } | null>(null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      tickTimer();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [tickTimer]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+    loadDailyHistory();
+  }, [loadDailyHistory]);
 
   const handleNewGame = (action: () => void, title: string, message: string) => {
     // Only ask for confirmation if game is in progress AND moves have been made
@@ -71,12 +62,6 @@ export function GameHeader() {
     }
   };
 
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
-  useEffect(() => {
-    loadDailyHistory();
-  }, [loadDailyHistory]);
-
   const getTodayStatus = () => {
     const today = new Date();
     const todaySession = dailyHistory.find(s => {
@@ -92,16 +77,14 @@ export function GameHeader() {
   const todayStatus = getTodayStatus();
 
   return (
-    <header className="flex w-full flex-col gap-4 mb-4">
-      {/* Title Row */}
-      <div className="flex w-full justify-center">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+    <nav className="flex w-full items-center justify-between border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
           Mini Sudoku
         </h1>
       </div>
 
-      {/* Controls Row */}
-      <div className="flex w-full items-center justify-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2">
         <TooltipProvider>
           <DropdownMenu>
             <Tooltip>
@@ -149,7 +132,7 @@ export function GameHeader() {
                 <p>Daily Challenge</p>
               </TooltipContent>
             </Tooltip>
-            <PopoverContent className="w-auto p-0" align="start">
+            <PopoverContent className="w-auto p-0" align="end">
               <CalendarComponent
                 mode="single"
                 selected={dailyDate ? new Date(dailyDate) : new Date()}
@@ -244,8 +227,6 @@ export function GameHeader() {
             </TooltipContent>
           </Tooltip>
 
-
-
           <SettingsModal />
           <ModeToggle />
 
@@ -264,31 +245,6 @@ export function GameHeader() {
         </TooltipProvider>
       </div>
 
-      {/* Info Row (Difficulty & Timer) */}
-      {status !== 'creating' && (
-        <div className="flex w-full items-center justify-between px-2 mt-2">
-          <div className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            {status === 'In Progress' || status === 'Not Started' || status === 'Completed' ? (
-              dailyDate ? (
-                <span>
-                  {new Date(dailyDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} ({difficulty})
-                </span>
-              ) : (
-                difficulty
-              )
-            ) : (
-              'Select a game'
-            )}
-          </div>
-
-          {settings.showTimer && (
-            <div className="font-mono text-sm font-medium tabular-nums text-neutral-600 dark:text-neutral-400">
-              {formatTime(timer)}
-            </div>
-          )}
-        </div>
-      )}
-
       <AlertDialog open={!!pendingAction} onOpenChange={(open) => !open && setPendingAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -303,6 +259,6 @@ export function GameHeader() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </header>
+    </nav>
   );
 }
