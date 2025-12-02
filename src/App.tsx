@@ -122,8 +122,8 @@ function GameContent() {
   }, [status]);
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-neutral-50 p-4 dark:bg-neutral-950">
-      <div className="w-fit">
+    <div className="flex min-h-dvh w-full items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+      <div className="w-fit p-4">
         <GameHeader />
 
         <main className="relative flex w-fit flex-col items-center gap-4 rounded-xl bg-white p-4 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
@@ -150,7 +150,7 @@ function App() {
       <GameContent />
       <Toaster />
       {/* Preload font to prevent layout shift/delay on first use */}
-      <span className="font-['Patrick_Hand'] opacity-0 absolute pointer-events-none">Preload</span>
+      <span className="font-['Patrick_Hand'] opacity-0 absolute top-0 left-0 w-0 h-0 overflow-hidden pointer-events-none">Preload</span>
     </ThemeProvider>
   );
 }
