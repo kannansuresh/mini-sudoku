@@ -123,10 +123,10 @@ function GameContent() {
 
   return (
     <div className="flex min-h-dvh w-full items-center justify-center bg-neutral-50 dark:bg-neutral-950">
-      <div className="w-fit p-4">
+      <div className="w-fit p-2 sm:p-4">
         <GameHeader />
 
-        <main className="relative flex w-fit flex-col items-center gap-4 rounded-xl bg-white p-4 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
+        <main className="relative flex w-fit flex-col items-center gap-4 rounded-xl bg-white p-3 shadow-xl ring-1 ring-neutral-200 dark:bg-neutral-900 dark:ring-neutral-800 sm:p-8">
           <div className="relative z-10">
             <SudokuGrid />
           </div>
