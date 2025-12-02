@@ -63,7 +63,7 @@ export function Cell({ row, col, value, isInitial, isConflict, isGridFull }: Cel
         isInitial ? "bg-neutral-200/50 text-neutral-950 font-semibold dark:bg-neutral-800 dark:text-neutral-50" : "bg-white text-blue-600 dark:bg-neutral-900 dark:text-blue-400",
         isSelected && "bg-blue-200 dark:bg-blue-900/50",
         isHintTarget && "bg-yellow-200 dark:bg-yellow-900/50",
-        !isSelected && !isHintTarget && settings.highlightSections && isRelated && "bg-purple-50 dark:bg-purple-900/20", // Changed to purple as requested
+        !isSelected && !isHintTarget && settings.highlightSections && isRelated && "bg-purple-100 dark:bg-purple-900/40",
         !isSelected && !isHintTarget && isSameValue && value !== null && "bg-blue-100 dark:bg-blue-900/30",
 
         // Error state (Text color only, background handled by stripes or red tint if stripes not visible enough)
