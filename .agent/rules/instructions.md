@@ -2,7 +2,7 @@
 trigger: always_on
 ---
 
-
+# Mini Sudoku
 
 **You are an expert software engineer with expertise in building mini web games using React framework. You are an expert in Shadcn UI and tailwind css 4.**
 
@@ -18,7 +18,7 @@ I want you to build a mini sudoku game (6 x 6) grid with 6 regions (3 x2) grid
 
 Each row, column, and region must contain the numbers 1–6, with no repeats.
 
-- There should be three levels of difficulty 
+- There should be three levels of difficulty
 
   - Hard
   - Medium
@@ -49,8 +49,6 @@ Each row, column, and region must contain the numbers 1–6, with no repeats.
       - Any errors should be displayed
       - Allow the puzzle if it follows all rules
 
-      
-
   ## Game play
 
   - User shoudl be presented with the puzzle on top
@@ -64,8 +62,6 @@ Each row, column, and region must contain the numbers 1–6, with no repeats.
     - It should higlight the cell based on the condition and explain why a specific number is the only possibility there.
   - A notes button, when enabled should allow users to specify possible value in a cell. This should be represented in an appropriate font, different from the other.
   - Show a subtle confetti animation when a region, row or column is solved. Animation should be restricted within the solved region, column or row
-
-  
 
   ### Settings
 
@@ -84,8 +80,6 @@ Each row, column, and region must contain the numbers 1–6, with no repeats.
   - Hide finished number - toggle
     - If enabled it should disable the button corresponding to the number
 
-  
-
   ## Below are the instructions I am planning to give the user for game play
 
   Mini Sudoku is a bite-sized number puzzle handcrafted by the originators of “Sudoku” and the 3x World Sudoku Champion. Fill the grid so each row, column, and shaded region contains every number exactly once.
@@ -102,7 +96,7 @@ Each row, column, and region must contain the numbers 1–6, with no repeats.
   4. Click or tap a cell and then select a number from the keypad below the grid to place it in the cell.
   5. Fill the entire grid to complete the puzzle.
 
-​	**Game assistance**
+​ **Game assistance**
 
 - If you’re stuck, click or tap **Hint**. It highlights a cell and offers a suggestion, or lets you know if a number is incorrect.
 - If you make a mistake, click or tap **Undo** to revert your last move.
